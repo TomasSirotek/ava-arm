@@ -1,0 +1,127 @@
+# Hardware-specific configuration for AVA arm
+# Diese Datei wird vom Hardware Bridge Node geladen
+
+# Transport Methode: 'http' oder 'serial'
+transport: http
+
+# HTTP configuration (for the LittleFS firmware)
+http:
+  host: 192.168.4.1
+  port: 80
+  path: /api/command
+  timeout_sec: 0.5
+  retry_count: 1
+
+# Serial configuration (for the serial-only firmware)
+serial:
+  port: /dev/ttyUSB0
+  baud: 115200
+  timeout_sec: 0.1
+
+# Servo calibration parameters
+servo_calibration:
+  # Neutral positions (in radians) — correspond to the 90 deg servo position
+  # Calibrated to the real startup pose of the ROS 2 serial firmware.
+  zero_rad:
+    - 1.57      # J1: π/2
+    - -1.57     # J2: -π/2
+    - -1.57     # J3: -π/2
+    - -1.57     # J4: -π/2
+    - -1.57     # J5: -π/2
+    - 0.0       # J6
+  
+  # Rotation direction (1 or -1)
+  # 1 = normal clockwise
+  # -1 = counter-clockwise
+  direction:
+    - 1   # J1
+    - 1   # J2
+    - 1   # J3
+    - 1   # J4
+    - 1   # J5
+    - -1  # J6 (gripper): the real servo is inverted vs. RViz -> mirror about 90 deg
+  
+  # Scaling factor (for fine-tuning)
+  # Typischerweise 1.0, kann adjustiert werden wenn Calibration nicht exakt ist
+  scale:
+    - 1.0   # J1
+    - 1.0   # J2
+    - 1.0   # J3
+    - 1.0   # J4
+    - 1.0   # J5
+    - 1.0   # J6
+  
+  # Mechanische Servo-Limits (in Graden)
+  # Basierend auf Servo-Datasheets:
+  # - SG90: 0-180 deg (on PCA9685)
+  # - MG996R: 0-180 deg (on PCA9685)
+  servo_min_deg:
+    - 0     # J1
+    - 0     # J2
+    - 0     # J3
+    - 0     # J4
+    - 0     # J5
+    - 0     # J6
+  
+  servo_max_deg:
+    - 180   # J1
+    - 180   # J2
+    - 180   # J3
+    - 180   # J4
+    - 180   # J5
+    - 180   # J6
+
+# Command Rate Limiting
+min_command_period_sec: 0.05  # Max 20 Hz (50ms minimum zwischen Commands)
+
+# Safety Features
+safety:
+  # Enable command timeout (stops the arm if no command for X seconds)
+  enable_timeout: true
+  command_timeout_sec: 2.0
+  
+  # Emergency STOP beim Deactivate
+  emergency_stop_on_deactivate: true
+
+# Hardware Info
+hardware_info:
+  arm_type: "AVA arm 5-DOF"
+  servos:
+    - name: "J1"
+      type: "MG996R"
+      frequency_hz: 50
+      pwm_min_ms: 1.0
+      pwm_max_ms: 2.0
+    - name: "J2"
+      type: "MG996R"
+      frequency_hz: 50
+      pwm_min_ms: 1.0
+      pwm_max_ms: 2.0
+    - name: "J3"
+      type: "MG996R"
+      frequency_hz: 50
+      pwm_min_ms: 1.0
+      pwm_max_ms: 2.0
+    - name: "J4"
+      type: "SG90"
+      frequency_hz: 50
+      pwm_min_ms: 1.0
+      pwm_max_ms: 2.0
+    - name: "J5"
+      type: "SG90"
+      frequency_hz: 50
+      pwm_min_ms: 1.0
+      pwm_max_ms: 2.0
+    - name: "J6"
+      type: "SG90"
+      frequency_hz: 50
+      pwm_min_ms: 1.0
+      pwm_max_ms: 2.0
+  
+  driver:
+    name: "PCA9685"
+    interface: "I2C"
+    i2c_address: 0x40
+    frequency_hz: 50
+    channels_total: 16
+    channels_used: 6

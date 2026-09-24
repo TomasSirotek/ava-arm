@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>ava_bringup</name>
+  <version>0.0.1</version>
+  <description>Top-level launch files for the AVA arm (sim and real). Stub.</description>
+  <maintainer email="72190589+TomasSirotek@users.noreply.github.com">Tomas Sirotek</maintainer>
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

@@ -1,0 +1,90 @@
+# Configuration for the overhead ArUco pick-and-place pipeline (ava).
+# Top-level keys MUST match the node names used in the source.
+
+# ----- ArUco detector ------------------------------------------------------
+aruco_detector_node:
+  ros__parameters:
+    # Fallback marker size in meters (used when an ID is not in marker_sizes).
+    marker_size: 0.031
+
+    # Per-ID physical sizes (meters), JSON string. Wins over marker_size.
+    # ALL markers (cube ID 0 + table corners ID 1..4) are 31 mm here.
+    marker_sizes: '{"0": 0.031, "1": 0.031, "2": 0.031, "3": 0.031, "4": 0.031}'
+
+    dictionary: "4X4_50"
+
+    # Optical frame the detector reports poses / broadcasts marker TF in.
+    # MUST match the child frame of the base_link->camera static transform.
+    camera_frame: "camera_optical_frame"
+
+    publish_tf: true
+    show_visualization: false        # keep false under ROS 2 (cv2.imshow can segfault)
+    tf_prefix: "aruco_marker_"
+
+# ----- USB camera ----------------------------------------------------------
+camera_node:
+  ros__parameters:
+    # Stable path to the USB "HD Web Camera" — immune to index swaps (video0<->video2)
+    # between integrated cam and USB cam on replug/reboot. WINS over camera_id.
+    camera_device: "/dev/v4l/by-id/usb-HD_Web_Camera_HD_Web_Camera_Ucamera001-video-index0"
+    camera_id: 0                     # fallback only (ignored when camera_device is set)
+    frame_rate: 30.0
+    frame_width: 1280                # MUST match the calibration resolution
+    frame_height: 720
+    camera_frame: "camera_optical_frame"
+    camera_info_url: ""              # path to calibrated intrinsics YAML (override at launch)
+
+# ----- Cube pose publisher -------------------------------------------------
+cube_pose_publisher_node:
+  ros__parameters:
+    marker_frame: "aruco_marker_0"   # the cube
+    target_frame: "world"            # == base_link
+    # Cube is 3 x 3 cm footprint, 5 cm tall.
+    cube_size_x: 0.03
+    cube_size_y: 0.03
+    cube_size_z: 0.10               # cube doubled to 10 cm tall (2026-06-29)
+    # base_link XY on table (z=0) -> cube center height fixed = cube_size_z/2.
+    cube_center_z: 0.05
+    publish_rate: 10.0
+    pose_timeout_sec: 3.0
+    smoothing_alpha: 0.3
+    min_position_jump: 0.05
+    collision_padding: 0.004
+    # Cube collision OFF (permanently): no planning headaches. The cube is shown
+    # live as a BLUE MarkerArray marker instead (no collision). The TABLE stays a
+    # collision object so the arm can't dive into the table.
+    enable_planning_scene: false
+    enable_marker: true
+    enable_verification_log: true
+    # Table collision + RViz box (top at z=0; base_link XY on table).
+    enable_table: true
+    table_size_x: 0.60
+    table_size_y: 0.35
+    table_size_z: 0.02
+    table_center_x: 0.0
+    table_center_y: -0.015          # marker rectangle center (y: -0.1645..+0.1345)
+    table_marker_frames: ["aruco_marker_1", "aruco_marker_2",
+                          "aruco_marker_3", "aruco_marker_4"]
+    # Measured base_link [x, y] (m) of each table-marker CENTER (user, 2026-06-29).
+    # Used for the calibration/verification log AND by calibrate_extrinsics below.
+    table_markers_expected: '{"1":[0.272,-0.1645],"2":[-0.272,-0.1645],"3":[-0.272,0.1345],"4":[0.272,0.1345]}'
+
+# ----- Camera-extrinsics calibrator (one-shot) -----------------------------
+# Solves base_link->camera_optical_frame from the 4 table markers at their known
+# base_link positions (Kabsch/SVD) and writes config/camera_extrinsics.yaml.
+# Run once with the camera up and all 4 table markers visible.
+calibrate_extrinsics:
+  ros__parameters:
+    camera_optical_frame: "camera_optical_frame"
+    target_frame: "base_link"
+    table_marker_frames: ["aruco_marker_1", "aruco_marker_2",
+                          "aruco_marker_3", "aruco_marker_4"]
+    # Same measured marker centers as above (base_link x,y); z = marker_z.
+    table_markers_expected: '{"1":[0.272,-0.1645],"2":[-0.272,-0.1645],"3":[-0.272,0.1345],"4":[0.272,0.1345]}'
+    marker_z: 0.0                    # markers lie on the table = base_link z 0
+    samples: 200                     # TF samples averaged per marker (anti-jitter)
+    min_markers: 3                   # need >=3 non-collinear to solve
+    # Cross-check only (measured camera stand offset): warns if solved t is far off.
+    expected_translation: [0.0, -0.048, 0.535]
+    # Output written here (point at the SOURCE tree so colcon build installs it).
+    output_file: ""

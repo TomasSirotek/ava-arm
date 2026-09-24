@@ -1,0 +1,26 @@
+# Parameters for cup_pick_and_place.py (node name 'cup_pick_and_place').
+# Passed via:  python3 cup_pick_and_place.py --ros-args --params-file <this>
+cup_pick_and_place:
+  ros__parameters:
+    # Clean vertical top-down grasp: tcp +Z (= finger/approach axis, URDF rpy 0,pi/2,0)
+    # points straight DOWN (approach_dir) and lies ON the marker-0 Z axis. The tcp
+    # (fingertips) descends to grasp_z. For the 10 cm cube (top ~0.10) grasp_z=0.07 =
+    # ~3 cm below the top. IMPORTANT: a VERTICAL tcp-Z is only reachable for fingertip
+    # z <= ~0.10 in the band x~0.15-0.20, y~-0.12..+0.08 -> approach_height/lift kept
+    # small so pre-grasp/lift stay inside that envelope (else the grasp would abort).
+    grasp_z: 0.07            # fingertip height at grasp (~3 cm below the 10 cm cube top)
+    # Target fly-over height ABOVE grasp_z. The task searches ADAPTIVELY downward from
+    # grasp_z+approach_height to grasp_z+0.05 for the highest vertically-reachable
+    # pre-grasp, then descends LINEARLY — so a generous value is safe everywhere.
+    approach_height: 0.10
+    lift: 0.06               # linear lift after closing (capped at the pre-grasp height)
+    approach_dir: [0.0, 0.0, -1.0]   # tcp +Z (finger axis) points straight DOWN onto the cube
+    # Fixed place position (inside the vertically reachable band, x~0.15-0.18, y~-0.10..+0.08).
+    place_x: 0.15
+    place_y: 0.10
+    place_z: 0.07            # cube center (2 cm below tcp) lands ~on the table at release
+    # Gripper poses (Revolute 6/7); SRDF named states: open/closed.
+    gripper_open: [-1.2, -1.2]
+    gripper_closed: [0.16, 0.16]   # tuned by user: 60% of 0.27 (0.9/0.54/0.38/0.27 over-closed)
+    gripper_time_sec: 2.0    # smooth, un-clamped trajectory
+    gripper_joints: ['Revolute 6', 'Revolute 7']

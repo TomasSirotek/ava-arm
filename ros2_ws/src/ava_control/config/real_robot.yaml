@@ -1,0 +1,38 @@
+esp32_servo_bridge_node:
+  ros__parameters:
+    command_topic: /joint_trajectory_controller/joint_trajectory
+    joint_state_topic: /joint_states
+
+    # transport: http | serial
+    # - http: ESP32 AP firmware endpoint /api/command
+    # - serial: legacy ESP32 sketch, removed protocol over USB UART
+    transport: http
+
+    # Rate limit for outgoing command stream.
+    min_send_period_sec: 0.05
+
+    # HTTP transport (LittleFS/WebApp firmware)
+    http_host: 192.168.4.1
+    http_port: 80
+    http_api_path: /api/command
+    http_timeout_sec: 0.25
+
+    # Serial transport (legacy ESP32 sketch, removed)
+    serial_port: /dev/ttyUSB0
+    serial_baud: 115200
+    serial_timeout_sec: 0.10
+
+    # Joint naming must match your ROS trajectory publisher.
+    joint_names: ["Revolute 1", "Revolute 2", "Revolute 3", "Revolute 4", "Revolute 5", "Revolute 6"]
+
+    # Servo limits (degrees) for safety.
+    # J1-J3 MG996R, J4-J6 SG90 (gripper on J6).
+    servo_min_deg: [0, 0, 0, 0, 0, 0]
+    servo_max_deg: [180, 180, 180, 180, 180, 180]
+
+    # Calibration mapping from ROS joint rad -> servo degrees:
+    # servo_deg = 90 + direction * (joint_rad - zero_rad) * (180/pi) * scale
+    # Start values chosen so your previous HOME pose maps to 90 deg on all joints.
+    joint_zero_rad: [1.57, -1.57, -3.14, -3.14, -1.57, 0.0]
+    joint_direction: [1, 1, 1, 1, 1, 1]
+    joint_scale: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0]

@@ -1,0 +1,62 @@
+<?xml version="1.0" ?>
+<!-- Graspable cube with an ArUco marker on top (mirrors the real cube).
+     3x3x10 cm, ~40 g, dynamic. Origin = geometric center -> spawn at the /cup_pose
+     center (z=0.05) so the box spans z 0..0.10. Marker texture is cosmetic (the REAL
+     camera does the detection). -->
+<sdf version="1.7">
+  <model name="cube">
+    <static>false</static>
+    <link name="link">
+      <!-- No gravity: the grasp helper (gazebo_grasp_attach) teleports the cube to the
+           tcp via the (slow) set_pose service; without gravity the cube does NOT fall
+           between teleports, so it stays firmly with the gripper. It also just rests
+           where spawned/placed (center z=0.05 = on the table). -->
+      <gravity>0</gravity>
+      <inertial>
+        <mass>0.04</mass>
+        <inertia>
+          <ixx>3.6e-5</ixx>
+          <iyy>3.6e-5</iyy>
+          <izz>6.0e-6</izz>
+          <ixy>0</ixy><ixz>0</ixz><iyz>0</iyz>
+        </inertia>
+      </inertial>
+
+      <!-- NO collision element: the cube is positioned purely by teleport
+           (gazebo_grasp_attach) and rests gravity-free. With a collision, the
+           closed gripper fingers push against it every teleport tick -> the cube
+           accumulates contact velocity and FLIES OFF after release. -->
+
+
+      <!-- cube body -->
+      <visual name="body">
+        <geometry>
+          <box><size>0.03 0.03 0.10</size></box>
+        </geometry>
+        <material>
+          <ambient>0.15 0.35 0.8 1</ambient>
+          <diffuse>0.15 0.35 0.8 1</diffuse>
+        </material>
+      </visual>
+
+      <!-- marker plate on the top face (cosmetic) -->
+      <visual name="marker_top">
+        <pose>0 0 0.0505 0 0 0</pose>
+        <geometry>
+          <box><size>0.03 0.03 0.001</size></box>
+        </geometry>
+        <material>
+          <ambient>1 1 1 1</ambient>
+          <diffuse>1 1 1 1</diffuse>
+          <pbr>
+            <metal>
+              <albedo_map>marker0.png</albedo_map>
+              <metalness>0.0</metalness>
+              <roughness>1.0</roughness>
+            </metal>
+          </pbr>
+        </material>
+      </visual>
+    </link>
+  </model>
+</sdf>

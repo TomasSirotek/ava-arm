@@ -1,0 +1,60 @@
+# ros2_control FollowJointTrajectoryController Konfiguration
+#
+# This controller receives trajectories and forwards them
+# an /joint_trajectory_controller/joint_trajectory Topic.
+#
+
+controller_manager:
+  ros__parameters:
+    update_rate: 100  # Hz
+    use_sim_time: false
+    
+    # Diese Controller werden geladen
+    joint_trajectory_controller:
+      type: joint_trajectory_controller/JointTrajectoryController
+
+# FollowJointTrajectoryController Konfiguration
+joint_trajectory_controller:
+  ros__parameters:
+    # Joints in dieser Controller
+    joints:
+      - Revolute 1
+      - Revolute 2
+      - Revolute 3
+      - Revolute 4
+      - Revolute 5
+      - Revolute 6
+    
+    # Command Interface (position oder velocity)
+    command_interfaces:
+      - position
+    
+    # State Interfaces
+    state_interfaces:
+      - position
+      - velocity
+    
+    # Goals parameter
+    allow_partial_joints_goal: false
+    
+    # Trajectory Execution
+    action_monitor_rate: 20.0  # Hz
+    allow_integration_in_goal_time: true
+    goal_time: 0.0  # seconds (0 = no limit)
+    
+    # Joint tolerances (wie nah muss Position am Ende sein)
+    stopped_velocity_tolerance: 0.02  # rad/s
+    action_monitor_rate: 20.0
+    
+    # Default tolerances for all joints
+    constraints:
+      stopped_velocity_tolerance: 0.02
+    
+    # Oder per-Joint tolerances:
+    # Revolute_1:
+    #   trajectory: 0.1
+    #   goal: 0.05
+    # ...
+    
+    # Publisher Rates
+    publish_rate: 50.0  # Hz

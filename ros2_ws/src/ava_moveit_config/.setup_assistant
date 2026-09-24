@@ -1,0 +1,13 @@
+moveit_setup_assistant_config:
+  URDF:
+    package: ava_description
+    relative_path: urdf/ava.xacro
+    xacro_args: ""
+  SRDF:
+    relative_path: config/ava.srdf
+  CONFIG:
+    package_name: ava_moveit_config
+    relative_path: ""
+    generated_timestamp: 1742313600
+  author_name: od
+  author_email: ""

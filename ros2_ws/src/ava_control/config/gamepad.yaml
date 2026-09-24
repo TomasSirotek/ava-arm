@@ -1,0 +1,42 @@
+gamepad_cartesian_node:
+  ros__parameters:
+    joy_topic: /joy
+    joint_state_topic: /joint_states
+    command_topic: /joint_trajectory_controller/joint_trajectory
+
+    # Joint-space movement settings
+    deadzone: 0.15
+    joint_step_rad: 0.03
+    gripper_step_rad: 0.02
+    traj_time_sec: 0.20
+    loop_hz: 20.0
+
+    # Requested direct joint mapping
+    # Joint 1: right stick up/down
+    # Joint 2: right stick left/right
+    # Joint 3: left stick up/down
+    # Joint 4: left stick left/right
+    # Joint 5: R1 button+ / R2 trigger-
+    # Joint 6 (gripper): L1 button+ / L2 trigger-
+    axis_joint1: 2
+    axis_joint2: 3
+    axis_joint3: 1
+    axis_joint4: 0
+    btn_joint5_pos: 10
+    axis_joint5_neg: 5
+    btn_joint6_pos: 9
+    axis_joint6_neg: 4
+
+    # Utility button (triangle = home)
+    btn_home: 3
+
+    # Keep this order aligned with joint_trajectory_controller
+    joint_names:
+      - Revolute 1
+      - Revolute 2
+      - Revolute 3
+      - Revolute 4
+      - Revolute 5
+      - Revolute 6
+
+    home_positions: [1.57, -1.57, -3.14, -3.14, -1.57, 0.0]

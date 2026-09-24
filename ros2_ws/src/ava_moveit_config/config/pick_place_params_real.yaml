@@ -1,0 +1,36 @@
+# REAL-ROBOT parameters for cup_pick_and_place.py:
+#   ros2 run ava_moveit_config cup_pick_and_place.py --ros-args \
+#     --params-file src/ava_moveit_config/config/pick_place_params_real.yaml
+#
+# Gripper poses = the CURRENT user-confirmed values (same as sim; hardware.yaml
+# direction J6 = -1 handles the real servo mirroring).
+# home_joints = the PROVEN safe real pose. The sim default [0,0,0,0,0] must NEVER be
+# used on the real arm: servo map deg = 90 + dir*(rad-zero)*57.3 puts all servos at
+# their 0/180 end stops (stall -> 5V sag -> all servos misbehave).
+cup_pick_and_place:
+  ros__parameters:
+    grasp_z: 0.07
+    # Pre-grasp 7 cm ABOVE the cube top/marker (0.10 + 0.07 = z 0.17): the arm first
+    # moves there, then descends LINEARLY (move_linear_z) so the fingers come straight
+    # down around the cube without touching it during the approach.
+    approach_height: 0.10
+    lift: 0.06
+    approach_dir: [0.0, 0.0, -1.0]
+    # PLACE = live-detected pose of this marker (put a marker-4 print-out where the
+    # cube should end up — must be within ~22 cm of the base). Falls back to the
+    # fixed place_x/y/z below if the marker is not visible.
+    place_marker_frame: 'aruco_marker_4'
+    place_x: 0.15
+    place_y: 0.10
+    # tcp settle height when opening: 6 cm below the grasp height (user-tuned: the
+    # cube rides higher in the real grip, so descend until it FIRMLY stands on the
+    # table — the fingers slide down the cube for the last cm — THEN open).
+    # Fingertips end ~1 cm above the table plate.
+    place_z: 0.01
+    # Gripper = ONE servo, full range (user directive): open = servo 180deg = -1.57,
+    # closed = servo 0deg = +1.57, full speed.
+    gripper_open: [-1.57, -1.57]
+    gripper_closed: [1.57, 1.57]
+    gripper_time_sec: 1.0
+    gripper_joints: ['Revolute 6', 'Revolute 7']
+    home_joints: [0.8, -0.8, -1.2, -0.8, -2.6]   # safe real home (NOT 0,0,0,0,0)

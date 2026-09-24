@@ -1,0 +1,60 @@
+<?xml version="1.0" ?>
+<!-- Static table mirroring the real one. Spawn at world origin (0,0,0):
+     top surface at z=0 (base_link XY sits on the table). Size 0.60 x 0.35 x 0.02,
+     centered at (0, -0.015) = center of the 4 corner-marker rectangle.
+     4 corner marker plates at the measured base_link positions (cosmetic; the REAL
+     camera detects the REAL markers). -->
+<sdf version="1.7">
+  <model name="table">
+    <static>true</static>
+    <link name="top">
+      <!-- table top: top face at z=0 -->
+      <collision name="collision">
+        <pose>0 -0.015 -0.01 0 0 0</pose>
+        <geometry>
+          <box><size>0.60 0.35 0.02</size></box>
+        </geometry>
+      </collision>
+      <visual name="visual">
+        <pose>0 -0.015 -0.01 0 0 0</pose>
+        <geometry>
+          <box><size>0.60 0.35 0.02</size></box>
+        </geometry>
+        <material>
+          <ambient>0.55 0.38 0.20 1</ambient>
+          <diffuse>0.55 0.38 0.20 1</diffuse>
+        </material>
+      </visual>
+
+      <!-- 4 corner ArUco marker plates (cosmetic), 31 mm, just above the top -->
+      <visual name="marker1">
+        <pose>0.272 -0.1645 0.0005 0 0 0</pose>
+        <geometry><box><size>0.031 0.031 0.001</size></box></geometry>
+        <material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse>
+          <pbr><metal><albedo_map>marker1.png</albedo_map><metalness>0.0</metalness><roughness>1.0</roughness></metal></pbr>
+        </material>
+      </visual>
+      <visual name="marker2">
+        <pose>-0.272 -0.1645 0.0005 0 0 0</pose>
+        <geometry><box><size>0.031 0.031 0.001</size></box></geometry>
+        <material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse>
+          <pbr><metal><albedo_map>marker2.png</albedo_map><metalness>0.0</metalness><roughness>1.0</roughness></metal></pbr>
+        </material>
+      </visual>
+      <visual name="marker3">
+        <pose>-0.272 0.1345 0.0005 0 0 0</pose>
+        <geometry><box><size>0.031 0.031 0.001</size></box></geometry>
+        <material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse>
+          <pbr><metal><albedo_map>marker3.png</albedo_map><metalness>0.0</metalness><roughness>1.0</roughness></metal></pbr>
+        </material>
+      </visual>
+      <visual name="marker4">
+        <pose>0.272 0.1345 0.0005 0 0 0</pose>
+        <geometry><box><size>0.031 0.031 0.001</size></box></geometry>
+        <material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse>
+          <pbr><metal><albedo_map>marker4.png</albedo_map><metalness>0.0</metalness><roughness>1.0</roughness></metal></pbr>
+        </material>
+      </visual>
+    </link>
+  </model>
+</sdf>
