@@ -14,12 +14,33 @@ Gazebo first and on hardware second.
 | `ros2_ws/src/ava_moveit_config` | MoveIt 2 config. |
 | `ros2_ws/src/ava_vision` | ArUco perception. |
 | `ros2_ws/src/ava_bringup` | Top-level launch (stub). |
+| `dashboard/` | Web dashboard (git submodule, [ava-dashboard](https://github.com/TomasSirotek/ava-dashboard)). |
 | `firmware/` | Microcontroller servo driver. |
 | `hardware/` | BOM, STEP/STL, electronics. |
 | `docs/` | Design notes and decision records. |
 | `tools/` | Offline scripts (URDF diff, mesh measurement). |
 
 Dependency direction: bringup -> control -> kinematics -> nothing.
+
+## Clone
+
+The dashboard is a submodule, so clone with `--recurse-submodules`:
+
+```bash
+git clone --recurse-submodules git@github.com:TomasSirotek/ava-arm.git
+```
+
+Already cloned without it:
+
+```bash
+git submodule update --init
+```
+
+Pull the latest of both:
+
+```bash
+git pull --recurse-submodules
+```
 
 ## Build
 
