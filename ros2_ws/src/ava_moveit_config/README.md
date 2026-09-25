@@ -1,5 +1,9 @@
 # ava_moveit_config
 
+> **SO-101 migration in progress.** `.setup_assistant`, `ava.srdf` and `joint_limits.yaml`
+> are updated for SO-101 and Gazebo + MoveIt runs. Files marked `TODO(so101-migration)`
+> (`arm_ik.py`, `cup_pick_and_place.py`) still describe the old 5-DOF OmArm arm.
+
 MoveIt 2 configuration for the AVA arm **plus** the complete computer-vision
 pick-and-place task. Built in **Part 3**
 ([MoveIt 2 Tutorial](https://omartronics.com/moveit2-motion-planning-real-robot-tutorial/))

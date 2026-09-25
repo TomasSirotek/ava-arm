@@ -17,3 +17,17 @@ firmware/**/.pio/
 .idea/
 *.swp
 .DS_Store
+
+# python virtualenvs (tools/)
+.venv/
+venv/
+
+# secrets / local env
+.env
+.env.*
+
+# logs and ROS bag recordings (large)
+*.log
+rosbag2_*/
+*.mcap
+*.db3

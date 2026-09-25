@@ -34,7 +34,7 @@ class GamepadCartesianNode(Node):
         self.declare_parameter('axis_joint6_neg', 4)  # L2- as negative trigger-axis input
 
         self.declare_parameter('btn_home', 3)
-        self.declare_parameter('joint_names', ['Revolute 1', 'Revolute 2', 'Revolute 3', 'Revolute 4', 'Revolute 5', 'Revolute 6'])
+        self.declare_parameter('joint_names', ['shoulder_pan', 'shoulder_lift', 'elbow_flex', 'wrist_roll', 'wrist_flex', 'gripper'])
         self.declare_parameter('home_positions', [1.57, -1.57, -3.14, -3.14, -1.57, 0.0])
 
         self.joy_topic = self.get_parameter('joy_topic').value

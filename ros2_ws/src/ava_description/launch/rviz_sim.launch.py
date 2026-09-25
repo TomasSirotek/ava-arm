@@ -7,8 +7,9 @@ from os.path import join
 
 def generate_launch_description():
     pkg_ros_gz_rbot = get_package_share_directory('ava_description')
-    robot_description_file = os.path.join(pkg_ros_gz_rbot, 'urdf', 'ava.xacro')
-    robot_description_config = xacro.process_file(robot_description_file)
+    robot_description_file = os.path.join(pkg_ros_gz_rbot, 'urdf', 'ava.urdf.xacro')
+    robot_description_config = xacro.process_file(
+        robot_description_file, mappings={'ros2_control_hardware_type': 'mock_components'})
     robot_description_xml = robot_description_config.toxml()
     robot_description = {'robot_description': robot_description_xml}
 
@@ -36,17 +37,9 @@ def generate_launch_description():
         output='screen'
     )
 
-    gripper_mimic_bridge = Node(
-        package='ava_control',
-        executable='gripper_mimic_bridge',
-        output='screen'
-    )
 
     return LaunchDescription([
         robot_state_publisher,
         joint_state_publisher_gui,
-        gripper_mimic_bridge,
-        rviz2,
-    ])
         rviz2,
     ])

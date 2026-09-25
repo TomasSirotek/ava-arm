@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# TODO(so101-migration): written for the OLD OmArm Zero kinematics
+# (5-DOF, wrist roll BEFORE wrist flex, two-finger gripper). Joint names were
+# renamed to the SO-101 convention, but the link offsets and IK math still describe the old
+# arm and are NOT valid for the SO-101 model in ava_description. Rewrite before use.
 """
 Custom 5-DOF inverse kinematics for the ava arm.
 
@@ -8,7 +12,7 @@ only need position (3) + approach-axis direction (2) = 5 constraints == 5 DOF.
 
 This module solves exactly that with a Levenberg-Marquardt (damped least squares)
 iteration over a numpy forward-kinematics built from the URDF chain
-base_link -> Revolute1..5 -> gripper_base_1 -> tcp.
+base_link -> shoulder_pan..wrist_flex -> gripper_base_1 -> tcp.
 
 Motion reference = the 'tcp' frame, defined in the URDF at the fingertips (+9 cm X,
 +1.5 cm Y from gripper_base_1) and rotated rpy(0, pi/2, 0) so tcp +Z == gripper_base_1
@@ -28,9 +32,9 @@ import numpy as np
 
 # IK chain ends at 'tcp' (URDF gripper_base_to_tcp: +translation, rpy(0, pi/2, 0)).
 # tcp +Z == gripper_base_1 +X == finger/approach axis. tcp = fingertip motion reference.
-JOINT_CHAIN = ['Revolute 1', 'Revolute 2', 'Revolute 3', 'Revolute 4',
-               'Revolute 5', 'gripper_base_to_tcp']
-REV_JOINTS = ['Revolute 1', 'Revolute 2', 'Revolute 3', 'Revolute 4', 'Revolute 5']
+JOINT_CHAIN = ['shoulder_pan', 'shoulder_lift', 'elbow_flex', 'wrist_roll',
+               'wrist_flex', 'gripper_base_to_tcp']
+REV_JOINTS = ['shoulder_pan', 'shoulder_lift', 'elbow_flex', 'wrist_roll', 'wrist_flex']
 
 
 def _rpy_to_R(roll, pitch, yaw):

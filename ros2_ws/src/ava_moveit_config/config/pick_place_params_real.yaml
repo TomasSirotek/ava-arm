@@ -32,5 +32,5 @@ cup_pick_and_place:
     gripper_open: [-1.57, -1.57]
     gripper_closed: [1.57, 1.57]
     gripper_time_sec: 1.0
-    gripper_joints: ['Revolute 6', 'Revolute 7']
+    gripper_joints: ['gripper']
     home_joints: [0.8, -0.8, -1.2, -0.8, -2.6]   # safe real home (NOT 0,0,0,0,0)

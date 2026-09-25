@@ -1,13 +1,11 @@
 moveit_setup_assistant_config:
-  URDF:
+  urdf:
     package: ava_description
-    relative_path: urdf/ava.xacro
-    xacro_args: ""
-  SRDF:
+    relative_path: urdf/ava.urdf.xacro
+    xacro_args: ros2_control_hardware_type:=gazebo
+  srdf:
     relative_path: config/ava.srdf
-  CONFIG:
-    package_name: ava_moveit_config
-    relative_path: ""
-    generated_timestamp: 1742313600
-  author_name: od
-  author_email: ""
+  package_settings:
+    author_name: SirTomas
+    author_email: kontakt.sirtomas@gmail.com
+    generated_timestamp: 1790340234

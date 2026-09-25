@@ -49,7 +49,7 @@ class Esp32ServoBridgeNode(Node):
 
         self.declare_parameter(
             'joint_names',
-            ['Revolute 1', 'Revolute 2', 'Revolute 3', 'Revolute 4', 'Revolute 5', 'Revolute 6'],
+            ['shoulder_pan', 'shoulder_lift', 'elbow_flex', 'wrist_roll', 'wrist_flex', 'gripper'],
         )
 
         # Servo mechanics and safety windows.

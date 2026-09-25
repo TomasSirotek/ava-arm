@@ -32,8 +32,8 @@ class HardwareBridgeNode(Node):
     """
     
     JOINT_NAMES = [
-        'Revolute 1', 'Revolute 2', 'Revolute 3',
-        'Revolute 4', 'Revolute 5', 'Revolute 6'
+        'shoulder_pan', 'shoulder_lift', 'elbow_flex',
+        'wrist_roll', 'wrist_flex', 'gripper'
     ]
     NUM_JOINTS = 6
     
@@ -215,7 +215,7 @@ class HardwareBridgeNode(Node):
 
             # The firmware SPEED is global: joint trajectories keep the usual
             # slow ramp (5); ONLY gripper-only trajectories run fast (20).
-            gripper_only = set(msg.joint_names) <= {'Revolute 6', 'Revolute 7'}
+            gripper_only = set(msg.joint_names) <= {'gripper'}
             desired_speed = 20 if gripper_only else 5
             if desired_speed != self._current_speed:
                 if self.resource_manager.send_speed_command(desired_speed):

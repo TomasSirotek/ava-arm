@@ -1,39 +1,52 @@
 # ava_description
 
-URDF/Xacro model, STL meshes and RViz/Gazebo bringup for the AVA arm 5-DOF arm.
-This is the package built in **Part 2** of the series:
-[ROS 2 URDF Tutorial — Visualize and Simulate a Robot Arm](https://omartronics.com/ros2-urdf-tutorial-robot-arm-rviz-gazebo/).
+URDF/xacro model and STL meshes for **Ava**, a 6-DOF SO-101 (SO-ARM100 family) arm.
+This package describes the robot and nothing else: it depends on no other `ava_*` package.
 
-## Contents
+## URDF files
+
+Edit the xacro files. Never edit `ava.urdf` by hand.
+
+| File | What it does |
+|---|---|
+| `urdf/ava.urdf.xacro` | **Entry point.** Declares the xacro args, all links (with meshes) and joints, and includes the files below. This is the file you pass to `xacro`. |
+| `urdf/ava.common.xacro` | Geometry constants: joint origins, colours, wrist-camera poses. |
+| `urdf/ava.control.xacro` | Servo parameters: motor IDs, PID gains, deadband, torque, joint limits. |
+| `urdf/ava.ros2control.xacro` | The `<ros2_control>` block. **The only part that differs between sim and real**, selected by `ros2_control_hardware_type` (`real`, `gazebo`, `mock_components`, `mujoco`). |
+| `urdf/ava.gazebo.xacro` | gz sim plugin that runs ros2_control inside Gazebo. Only included when `ros2_control_hardware_type:=gazebo`. |
+| `urdf/ava.urdf` | **Generated** plain URDF (`mock_components`) for tools that cannot run xacro: web dashboard, MuJoCo, viewers. Committed to git. |
+
+Regenerate `ava.urdf` after any xacro change (it runs `check_urdf` and refuses to write an invalid file):
+
+```bash
+source /opt/ros/jazzy/setup.bash && source ros2_ws/install/setup.bash
+ros2_ws/src/ava_description/scripts/generate_urdf.sh
+```
+
+## Joints
+
+| Joint | Moves | Servo ID |
+|---|---|---|
+| `shoulder_pan` | whole arm about the vertical axis | 1 |
+| `shoulder_lift` | upper arm | 2 |
+| `elbow_flex` | lower arm | 3 |
+| `wrist_flex` | wrist pitch | 4 |
+| `wrist_roll` | gripper roll | 5 |
+| `gripper` | moving jaw | 6 |
+
+Links use a `_link` suffix (`shoulder_link`, `upper_arm_link`, …). `end_effector_link` is the tool frame.
+
+## Other contents
 
 | Path | Purpose |
 |---|---|
-| `urdf/ava.xacro` | Main robot description: links, joints, limits, the `tcp` grasp frame, `ros2_control` block |
-| `urdf/ava.gazebo` / `.ros2control` / `materials.xacro` | Gazebo plugins, controller hardware interface, colors |
-| `meshes/*.stl` | 8 visual/collision meshes exported from Fusion 360 |
-| `config/gazebo_controllers.yaml` | `joint_state_broadcaster` + `joint_trajectory_controller` (+ PID gains) for Gazebo |
-| `config/*.rviz` | Preconfigured RViz views |
+| `meshes/*.stl` | SO-101 visual/collision meshes (from TheRobotStudio SO-ARM100, Apache-2.0) |
+| `config/gazebo_controllers.yaml` | Controllers loaded by the Gazebo plugin |
+| `config/*.rviz` | Saved RViz views |
 | `launch/display.launch.py` | Model + joint sliders in RViz |
-| `launch/gazebo.launch.py` | Gazebo Harmonic: spawn robot, load controllers, clock bridge |
-| `launch/rviz_sim.launch.py` | RViz-only kinematic simulation |
-| `gripper_mimic_bridge.py` | Mirrors `Revolute 6` into `Revolute 7` for topic-based gripper commands that omit the second finger |
-
-## Usage
+| `launch/rviz_sim.launch.py` | RViz-only kinematic view |
+| `launch/gazebo.launch.py` | Gazebo Harmonic: spawn robot, load controllers (moves to `ava_bringup` once sim is verified) |
 
 ```bash
-# Look at the model, move joints with sliders
 ros2 launch ava_description display.launch.py
-
-# Full physics simulation (Gazebo Harmonic)
-ros2 launch ava_description gazebo.launch.py
 ```
-
-## Notes on the model
-
-- Joint names are `Revolute 1`–`Revolute 5` (arm) and `Revolute 6`/`Revolute 7` (gripper
-  fingers). `world` == `base_link`; the table top is at `z = 0`.
-- The fixed **`tcp` frame** sits at the fingertip midpoint (9 cm along the gripper X axis)
-  and is rotated so **tcp +Z is the finger/approach axis** — the pick-and-place IK
-  (Part 4) aligns this axis vertically for top-down grasps.
-- Gripper joint limits are `-1.6 … 1.6 rad` so both the simulation gripper poses and the
-  full real servo range (0–180°) are representable.

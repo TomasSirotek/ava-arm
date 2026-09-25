@@ -3,6 +3,7 @@ from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, Time
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
+from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 
 
@@ -23,6 +24,15 @@ def generate_launch_description():
                 PythonLaunchDescriptionSource(
                     PathJoinSubstitution([desc_pkg, "launch", "gazebo.launch.py"])
                 )
+            ),
+            # The SRDF's virtual joint makes "world" MoveIt's planning frame, but the URDF
+            # starts at base_footprint, so nothing else publishes it. Robot sits at the origin.
+            Node(
+                package="tf2_ros",
+                executable="static_transform_publisher",
+                name="world_to_base_footprint",
+                arguments=["--frame-id", "world", "--child-frame-id", "base_footprint"],
+                parameters=[{"use_sim_time": True}],
             ),
             TimerAction(
                 period=4.0,

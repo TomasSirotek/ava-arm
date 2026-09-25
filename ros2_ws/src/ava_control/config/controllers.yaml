@@ -18,12 +18,12 @@ joint_trajectory_controller:
   ros__parameters:
     # Joints in dieser Controller
     joints:
-      - Revolute 1
-      - Revolute 2
-      - Revolute 3
-      - Revolute 4
-      - Revolute 5
-      - Revolute 6
+      - shoulder_pan
+      - shoulder_lift
+      - elbow_flex
+      - wrist_roll
+      - wrist_flex
+      - gripper
     
     # Command Interface (position oder velocity)
     command_interfaces:
@@ -51,7 +51,7 @@ joint_trajectory_controller:
       stopped_velocity_tolerance: 0.02
     
     # Oder per-Joint tolerances:
-    # Revolute_1:
+    # shoulder_pan:
     #   trajectory: 0.1
     #   goal: 0.05
     # ...

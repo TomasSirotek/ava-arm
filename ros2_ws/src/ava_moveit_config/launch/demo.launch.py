@@ -24,7 +24,7 @@ def _fake_hardware_robot_description_xml():
     )
 
     root = ET.fromstring(robot_xml)
-    epsilon_upper_joints = {"Revolute 2", "Revolute 3", "Revolute 4", "Revolute 5"}
+    epsilon_upper_joints = {"shoulder_lift", "elbow_flex", "wrist_roll", "wrist_flex"}
     for joint in root.findall("joint"):
         name = joint.attrib.get("name", "")
         limit = joint.find("limit")
@@ -32,7 +32,7 @@ def _fake_hardware_robot_description_xml():
             continue
         if name in epsilon_upper_joints:
             limit.set("upper", "0.0005")
-        if name == "Revolute 1":
+        if name == "shoulder_pan":
             limit.set("lower", "-0.0005")
 
     return ET.tostring(root, encoding="unicode")

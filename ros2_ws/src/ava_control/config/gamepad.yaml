@@ -32,11 +32,11 @@ gamepad_cartesian_node:
 
     # Keep this order aligned with joint_trajectory_controller
     joint_names:
-      - Revolute 1
-      - Revolute 2
-      - Revolute 3
-      - Revolute 4
-      - Revolute 5
-      - Revolute 6
+      - shoulder_pan
+      - shoulder_lift
+      - elbow_flex
+      - wrist_roll
+      - wrist_flex
+      - gripper
 
     home_positions: [1.57, -1.57, -3.14, -3.14, -1.57, 0.0]

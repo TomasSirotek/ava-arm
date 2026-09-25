@@ -1,7 +1,8 @@
 import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import IncludeLaunchDescription, TimerAction, ExecuteProcess
+from launch.actions import AppendEnvironmentVariable, DeclareLaunchArgument, IncludeLaunchDescription, TimerAction, ExecuteProcess
+from launch.substitutions import LaunchConfiguration, PythonExpression
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch_ros.actions import Node
 import xacro
@@ -12,10 +13,11 @@ def generate_launch_description():
     pkg_ros_gz_rbot = get_package_share_directory('ava_description')
 
 
-    robot_description_file = os.path.join(pkg_ros_gz_rbot, 'urdf', 'ava.xacro')
+    robot_description_file = os.path.join(pkg_ros_gz_rbot, 'urdf', 'ava.urdf.xacro')
     ros_gz_bridge_config = os.path.join(pkg_ros_gz_rbot, 'config', 'ros_gz_bridge_gazebo.yaml')
     
-    robot_description_config = xacro.process_file(robot_description_file)
+    robot_description_config = xacro.process_file(
+        robot_description_file, mappings={'ros2_control_hardware_type': 'gazebo'})
     robot_description_xml = robot_description_config.toxml()
     robot_description = {'robot_description': robot_description_xml}
 
@@ -35,9 +37,16 @@ def generate_launch_description():
     )
 
    
+    # gz resolves the URDF's package://ava_description/... meshes as model://ava_description/...
+    # by searching GZ_SIM_RESOURCE_PATH, so it must contain the dir that holds ava_description/.
+    gz_resource_path = AppendEnvironmentVariable(
+        'GZ_SIM_RESOURCE_PATH', os.path.dirname(pkg_ros_gz_rbot))
+
     gazebo = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(join(pkg_ros_gz_sim, "launch", "gz_sim.launch.py")),
-        launch_arguments={"gz_args": "-r -v 4 empty.sdf"}.items()
+        # headless:=true runs only the physics server (-s), no Gazebo window.
+        launch_arguments={"gz_args": PythonExpression(
+            ["'-r -v 4 empty.sdf' + (' -s' if '", LaunchConfiguration("headless"), "' == 'true' else '')"])}.items()
     )
 
     spawn_robot = TimerAction(
@@ -75,7 +84,7 @@ def generate_launch_description():
     #             '-lc',
     #             "ros2 topic pub --once /joint_trajectory_controller/joint_trajectory "
     #             "trajectory_msgs/msg/JointTrajectory "
-    #             "\"{joint_names: ['Revolute 1', 'Revolute 2', 'Revolute 3', 'Revolute 4', 'Revolute 5', 'Revolute 6'], "
+    #             "\"{joint_names: ['shoulder_pan', 'shoulder_lift', 'elbow_flex', 'wrist_roll', 'wrist_flex', 'gripper'], "
     #             "points: [{positions: [1.57, -1.57, -3.14, -3.14, -1.57, 0.0], time_from_start: {sec: 3, nanosec: 0}}]}\""
     #         ],
     #         output='screen'
@@ -97,13 +106,10 @@ def generate_launch_description():
         output='screen'
     )
 
-    gripper_mimic_bridge = Node(
-        package='ava_control',
-        executable='gripper_mimic_bridge',
-        output='screen'
-    )
 
     return LaunchDescription([
+        DeclareLaunchArgument('headless', default_value='false'),
+        gz_resource_path,
         gazebo,
         robot_state_publisher,
         spawn_robot,
@@ -111,5 +117,4 @@ def generate_launch_description():
         ensure_joint_trajectory_controller,
         # set_start_pose,
         ros_gz_bridge,
-        gripper_mimic_bridge,
     ])

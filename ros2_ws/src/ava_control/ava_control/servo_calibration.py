@@ -1,3 +1,7 @@
+# TODO(so101-migration): written for the OLD OmArm Zero kinematics
+# (5-DOF, wrist roll BEFORE wrist flex, two-finger gripper). Joint names were
+# renamed to the SO-101 convention, but the zero offsets and directions still describe the old
+# arm and are NOT valid for the SO-101 model in ava_description. Rewrite before use.
 """
 Servo calibration and PWM conversion utilities for AVA arm.
 
@@ -145,17 +149,17 @@ def create_default_calibrations() -> dict:
         Dictionary mapping joint names to ServoCalibration objects
     """
     calibrations = {
-        'Revolute 1': ServoCalibration('J1', zero_rad=1.57, direction=1, scale=1.0,
+        'shoulder_pan': ServoCalibration('J1', zero_rad=1.57, direction=1, scale=1.0,
                                        servo_min_deg=0, servo_max_deg=180),
-        'Revolute 2': ServoCalibration('J2', zero_rad=-1.57, direction=1, scale=1.0,
+        'shoulder_lift': ServoCalibration('J2', zero_rad=-1.57, direction=1, scale=1.0,
                                        servo_min_deg=0, servo_max_deg=180),
-        'Revolute 3': ServoCalibration('J3', zero_rad=-1.57, direction=1, scale=1.0,
+        'elbow_flex': ServoCalibration('J3', zero_rad=-1.57, direction=1, scale=1.0,
                                        servo_min_deg=0, servo_max_deg=180),
-        'Revolute 4': ServoCalibration('J4', zero_rad=-1.57, direction=1, scale=1.0,
+        'wrist_roll': ServoCalibration('J4', zero_rad=-1.57, direction=1, scale=1.0,
                                        servo_min_deg=0, servo_max_deg=180),
-        'Revolute 5': ServoCalibration('J5', zero_rad=-1.57, direction=1, scale=1.0,
+        'wrist_flex': ServoCalibration('J5', zero_rad=-1.57, direction=1, scale=1.0,
                                        servo_min_deg=0, servo_max_deg=180),
-        'Revolute 6': ServoCalibration('J6', zero_rad=0.0, direction=1, scale=1.0,
+        'gripper': ServoCalibration('J6', zero_rad=0.0, direction=1, scale=1.0,
                                        servo_min_deg=0, servo_max_deg=180),
     }
     return calibrations
@@ -181,7 +185,7 @@ def load_calibrations_from_yaml(calibration_dict: dict) -> dict:
     Returns:
         Dictionary mapping joint names to ServoCalibration objects
     """
-    joint_names = ['Revolute 1', 'Revolute 2', 'Revolute 3', 'Revolute 4', 'Revolute 5', 'Revolute 6']
+    joint_names = ['shoulder_pan', 'shoulder_lift', 'elbow_flex', 'wrist_roll', 'wrist_flex', 'gripper']
     
     zero_rad = calibration_dict.get('zero_rad', [1.57, -1.57, -1.57, -1.57, -1.57, 0.0])
     direction = calibration_dict.get('direction', [1, 1, 1, 1, 1, 1])

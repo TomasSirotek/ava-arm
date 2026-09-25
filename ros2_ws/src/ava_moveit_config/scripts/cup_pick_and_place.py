@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# TODO(so101-migration): written for the OLD OmArm Zero kinematics
+# (5-DOF, wrist roll BEFORE wrist flex, two-finger gripper). Joint names were
+# renamed to the SO-101 convention, but the joint poses, link names and gripper logic still describe the old
+# arm and are NOT valid for the SO-101 model in ava_description. Rewrite before use.
 """
 Cup pick-and-place demo for ava (ROS 2 Jazzy)
 Publishes joint trajectories to the joint_trajectory_controller
@@ -22,7 +26,7 @@ import time
 
 import arm_ik   # custom 5-DOF IK (installed next to this script)
 
-ARM_JOINTS = ['Revolute 1', 'Revolute 2', 'Revolute 3', 'Revolute 4', 'Revolute 5']
+ARM_JOINTS = ['shoulder_pan', 'shoulder_lift', 'elbow_flex', 'wrist_roll', 'wrist_flex']
 
 
 class CupPickAndPlace(Node):
@@ -44,7 +48,7 @@ class CupPickAndPlace(Node):
         self.declare_parameter('gripper_open', [-1.2, -1.2])
         self.declare_parameter('gripper_closed', [0.9, 0.9])
         self.declare_parameter('gripper_time_sec', 1.0)
-        self.declare_parameter('gripper_joints', ['Revolute 6', 'Revolute 7'])
+        self.declare_parameter('gripper_joints', ['gripper'])
         # goto_only: only drive the TCP to the marker-0 position (no grasp/place).
         self.declare_parameter('goto_only', False)
         # home_joints: end-of-demo arm pose. Default [0..0] is for the SIM. On the REAL
@@ -613,8 +617,8 @@ class CupPickAndPlace(Node):
             f'(z {z_from:.3f} → {z_to:.3f}), tcp stays vertically above ({x:.3f},{y:.3f})')
         for q in chain:
             m = JointTrajectory()
-            m.joint_names = ['Revolute 1', 'Revolute 2', 'Revolute 3',
-                             'Revolute 4', 'Revolute 5']
+            m.joint_names = ['shoulder_pan', 'shoulder_lift', 'elbow_flex',
+                             'wrist_roll', 'wrist_flex']
             pt = JointTrajectoryPoint()
             pt.positions = [float(v) for v in q]
             pt.time_from_start = MsgDuration(
@@ -708,8 +712,8 @@ class CupPickAndPlace(Node):
         req.start_state.is_diff = True
 
         c = Constraints()
-        for jn, pos in zip(['Revolute 1', 'Revolute 2', 'Revolute 3',
-                            'Revolute 4', 'Revolute 5'], self.home_joints):
+        for jn, pos in zip(['shoulder_pan', 'shoulder_lift', 'elbow_flex',
+                            'wrist_roll', 'wrist_flex'], self.home_joints):
             jc = JointConstraint()
             jc.joint_name = jn
             jc.position = float(pos)
@@ -744,7 +748,7 @@ class CupPickAndPlace(Node):
     def send_gripper(self, positions, accept_timeout=10.0, result_timeout=15.0):
         """Drive the gripper via the direct FollowJointTrajectory action.
 
-        Sendet ein 2-Joint-Goal (Revolute 6/7). Der joint_trajectory_controller
+        Sendet ein 2-Joint-Goal (gripper). Der joint_trajectory_controller
         akzeptiert Teil-Joint-Goals und haelt die uebrigen Joints. Funktioniert
         identisch in Sim und auf der echten Hardware (Bridge).
         """

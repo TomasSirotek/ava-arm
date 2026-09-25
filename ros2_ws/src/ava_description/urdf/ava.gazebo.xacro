@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<!-- Gazebo (gz sim) extras for the Ava arm: the plugin that runs ros2_control inside
+     the simulator and loads the controllers. Included by ava.urdf.xacro only when
+     ros2_control_hardware_type:=gazebo. Not a standalone robot. -->
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- Bolt the base to the ground. Without it the arm is free-standing and tips over
+       when stretched out. Gazebo-only, so the URDF tree seen by RViz/MoveIt is unchanged.
+       base_link, not base_footprint: the massless root link is dropped when gz converts to SDF. -->
+  <gazebo>
+    <joint name="fixed_to_world" type="fixed">
+      <parent>world</parent>
+      <child>base_link</child>
+    </joint>
+  </gazebo>
+
+  <gazebo>
+    <plugin filename="gz_ros2_control-system" name="gz_ros2_control::GazeboSimROS2ControlPlugin">
+      <parameters>$(find ava_description)/config/gazebo_controllers.yaml</parameters>
+    </plugin>
+  </gazebo>
+
+</robot>

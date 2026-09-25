@@ -11,8 +11,9 @@ from ament_index_python.packages import get_package_share_directory
 def generate_launch_description():
     share_dir = get_package_share_directory('ava_description')
 
-    xacro_file = os.path.join(share_dir, 'urdf', 'ava.xacro')
-    robot_description_config = xacro.process_file(xacro_file)
+    xacro_file = os.path.join(share_dir, 'urdf', 'ava.urdf.xacro')
+    robot_description_config = xacro.process_file(
+        xacro_file, mappings={'ros2_control_hardware_type': 'mock_components'})
     robot_urdf = robot_description_config.toxml()
 
     rviz_config_file = os.path.join(share_dir, 'config', 'display.rviz')
@@ -26,12 +27,12 @@ def generate_launch_description():
 
     # Startpose override disabled: use natural/default joint startup state.
     # home_zeros = {
-    #     'Revolute 1': 1.57,
-    #     'Revolute 2': -1.57,
-    #     'Revolute 3': -3.14,
-    #     'Revolute 4': -3.14,
-    #     'Revolute 5': -1.57,
-    #     'Revolute 6': 0.0,
+    #     'shoulder_pan': 1.57,
+    #     'shoulder_lift': -1.57,
+    #     'elbow_flex': -3.14,
+    #     'wrist_roll': -3.14,
+    #     'wrist_flex': -1.57,
+    #     'gripper': 0.0,
     # }
 
     robot_state_publisher_node = Node(

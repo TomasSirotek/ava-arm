@@ -19,8 +19,8 @@ cup_pick_and_place:
     place_x: 0.15
     place_y: 0.10
     place_z: 0.07            # cube center (2 cm below tcp) lands ~on the table at release
-    # Gripper poses (Revolute 6/7); SRDF named states: open/closed.
+    # Gripper poses (gripper); SRDF named states: open/closed.
     gripper_open: [-1.2, -1.2]
     gripper_closed: [0.16, 0.16]   # tuned by user: 60% of 0.27 (0.9/0.54/0.38/0.27 over-closed)
     gripper_time_sec: 2.0    # smooth, un-clamped trajectory
-    gripper_joints: ['Revolute 6', 'Revolute 7']
+    gripper_joints: ['gripper']

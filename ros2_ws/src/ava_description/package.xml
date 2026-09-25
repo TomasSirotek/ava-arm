@@ -3,9 +3,13 @@
 <package format="3">
   <name>ava_description</name>
   <version>1.0.0</version>
-  <description>URDF/Xacro model, meshes and RViz/Gazebo bringup for the AVA arm 5-DOF robotic arm (omartronics.com).</description>
-  <maintainer email="info@omartronics.com">Omar Draidrya</maintainer>
+  <description>URDF/xacro model and meshes for the Ava 6-DOF arm (SO-101).</description>
+  <maintainer email="72190589+TomasSirotek@users.noreply.github.com">Tomas Sirotek</maintainer>
+  <author>Omar Draidrya (OmArm Zero)</author>
+  <author>Aditya Kamath (so_arm_ros2)</author>
+  <!-- MIT: OmArm Zero launch/config; Apache-2.0: SO-101 xacro (so_arm_ros2) + meshes (SO-ARM100). See ATTRIBUTION.md -->
   <license>MIT</license>
+  <license>Apache-2.0</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 

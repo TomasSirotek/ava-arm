@@ -14,10 +14,9 @@ moveit_simple_controller_manager:
     action_ns: follow_joint_trajectory
     default: true
     joints:
-      - "Revolute 1"
-      - "Revolute 2"
-      - "Revolute 3"
-      - "Revolute 4"
-      - "Revolute 5"
-      - "Revolute 6"
-      - "Revolute 7"
+      - "shoulder_pan"
+      - "shoulder_lift"
+      - "elbow_flex"
+      - "wrist_roll"
+      - "wrist_flex"
+      - "gripper"

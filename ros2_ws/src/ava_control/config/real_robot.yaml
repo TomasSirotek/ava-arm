@@ -23,7 +23,7 @@ esp32_servo_bridge_node:
     serial_timeout_sec: 0.10
 
     # Joint naming must match your ROS trajectory publisher.
-    joint_names: ["Revolute 1", "Revolute 2", "Revolute 3", "Revolute 4", "Revolute 5", "Revolute 6"]
+    joint_names: ["shoulder_pan", "shoulder_lift", "elbow_flex", "wrist_roll", "wrist_flex", "gripper"]
 
     # Servo limits (degrees) for safety.
     # J1-J3 MG996R, J4-J6 SG90 (gripper on J6).
