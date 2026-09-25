@@ -4,7 +4,22 @@ All notable changes to this repo. Format: [Keep a Changelog](https://keepachange
 
 ## [Unreleased]
 
+### In progress — arm redesign
+- **Why:** the SO-101 model failed the load test in Gazebo. Most of the weight and the payload
+  sit at the end of the arm, so the shoulder and elbow need bigger, stronger, more expensive
+  servos than planned. The torque math (`tools/torque_monitor.py`) confirmed it: shortening the
+  links barely helps.
+- **Decision:** switch to a different open-source / free 3D model built for **2× MG996R + 4× SG90**.
+- **Now:** redrawing it in Fusion 360. The MG995 drawing had no usable dimensions — the
+  documentation and the available models all disagreed — so the servo was re-measured from the
+  manufacturer's details and redrawn.
+
+### TODO
+- Import the new model (URDF + meshes) into `ava_description` and re-run the Gazebo load test.
+- Servo layout for the new model: 2× MG996R, 4× SG90.
+
 ### Added
+- `tools/torque_monitor.py`: live torque per joint vs its servo (OK / HOT / FAIL); Gazebo `payload_kg:=` option to test with a weight in the gripper.
 - SO-101 robot model in `ava_description` (from [so_arm_ros2](https://github.com/adityakamath/so_arm_ros2), meshes from [SO-ARM100](https://github.com/TheRobotStudio/SO-ARM100)), with a single entry point `ava.urdf.xacro`.
 - `ava.ros2control.xacro`: one switch for `real` / `gazebo` / `mock_components` / `mujoco`.
 - `scripts/generate_urdf.sh`: builds the plain `urdf/ava.urdf` (for the dashboard and other tools) and validates it with `check_urdf`.

@@ -1,14 +1,14 @@
 import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import AppendEnvironmentVariable, DeclareLaunchArgument, IncludeLaunchDescription, TimerAction, ExecuteProcess
+from launch.actions import AppendEnvironmentVariable, DeclareLaunchArgument, IncludeLaunchDescription, OpaqueFunction, TimerAction, ExecuteProcess
 from launch.substitutions import LaunchConfiguration, PythonExpression
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch_ros.actions import Node
 import xacro
 from os.path import join
 
-def generate_launch_description():
+def launch_setup(context):
     pkg_ros_gz_sim = get_package_share_directory('ros_gz_sim')
     pkg_ros_gz_rbot = get_package_share_directory('ava_description')
 
@@ -17,7 +17,12 @@ def generate_launch_description():
     ros_gz_bridge_config = os.path.join(pkg_ros_gz_rbot, 'config', 'ros_gz_bridge_gazebo.yaml')
     
     robot_description_config = xacro.process_file(
-        robot_description_file, mappings={'ros2_control_hardware_type': 'gazebo'})
+        robot_description_file,
+        mappings={
+            'ros2_control_hardware_type': 'gazebo',
+            # payload_kg:=0.1 hangs a 100 g test mass at the gripper (load testing).
+            'payload_kg': LaunchConfiguration('payload_kg').perform(context),
+        })
     robot_description_xml = robot_description_config.toxml()
     robot_description = {'robot_description': robot_description_xml}
 
@@ -107,8 +112,7 @@ def generate_launch_description():
     )
 
 
-    return LaunchDescription([
-        DeclareLaunchArgument('headless', default_value='false'),
+    return [
         gz_resource_path,
         gazebo,
         robot_state_publisher,
@@ -117,4 +121,12 @@ def generate_launch_description():
         ensure_joint_trajectory_controller,
         # set_start_pose,
         ros_gz_bridge,
+    ]
+
+
+def generate_launch_description():
+    return LaunchDescription([
+        DeclareLaunchArgument('headless', default_value='false'),
+        DeclareLaunchArgument('payload_kg', default_value='0'),
+        OpaqueFunction(function=launch_setup),
     ])
