@@ -21,12 +21,14 @@ KGCM_TO_NM = 0.0980665
 # SG90: datasheet at 4.8 V. Check against the datasheet of the servos you actually bought.
 SERVOS = {"MG996R": 11.0 * KGCM_TO_NM, "SG90": 1.8 * KGCM_TO_NM}
 
-# Which servo drives which joint. MG996R on the three joints that carry the arm and load.
+# Which servo drives which joint. Matches the CAD redesign's 2x MG996R + 4x SG90 layout
+# and the per-joint effort limits in ava_description/urdf/ava.control.xacro: the two
+# base joints carry the arm and the load, everything from the elbow out is an SG90.
 JOINT_SERVO = {
-    "shoulder_pan": "SG90",
+    "shoulder_pan": "MG996R",
     "shoulder_lift": "MG996R",
-    "elbow_flex": "MG996R",
-    "wrist_flex": "MG996R",
+    "elbow_flex": "SG90",
+    "wrist_flex": "SG90",
     "wrist_roll": "SG90",
     "gripper": "SG90",
 }

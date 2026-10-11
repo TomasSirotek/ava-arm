@@ -1,8 +1,7 @@
-#!/usr/bin/env python3
-# TODO(so101-migration): written for the OLD OmArm Zero kinematics
-# (5-DOF, wrist roll BEFORE wrist flex, two-finger gripper). Joint names were
-# renamed to the SO-101 convention, but the joint poses, link names and gripper logic still describe the old
-# arm and are NOT valid for the SO-101 model in ava_description. Rewrite before use.
+# TODO(cad-redesign): STALE - written for the OLD OmArm Zero kinematics and never
+# ported. The joint names match the current arm, but the joint poses, link names and gripper logic
+# still describe the old arm and are NOT valid for the in-house CAD model now in
+# ava_description (see urdf/ava_robotic_arm.urdf). Rewrite before use.
 """
 Cup pick-and-place demo for ava (ROS 2 Jazzy)
 Publishes joint trajectories to the joint_trajectory_controller

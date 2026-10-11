@@ -48,18 +48,34 @@
   <!-- Position insensitive-area (CW_DEAD/CCW_DEAD, both set to this value) -->
   <xacro:property name="deadband" value="10"/>
 
-  <!-- Joint limits (from onshape-to-robot calibration) -->
-  <xacro:property name="shoulder_pan_lower" value="-1.91986"/>
-  <xacro:property name="shoulder_pan_upper" value="1.91986"/>
-  <xacro:property name="shoulder_lift_lower" value="-1.74533"/>
-  <xacro:property name="shoulder_lift_upper" value="1.74533"/>
-  <xacro:property name="elbow_flex_lower" value="-1.69"/>
-  <xacro:property name="elbow_flex_upper" value="1.69"/>
-  <xacro:property name="wrist_flex_lower" value="-1.65806"/>
-  <xacro:property name="wrist_flex_upper" value="1.65806"/>
-  <xacro:property name="wrist_roll_lower" value="-2.74385"/>
-  <xacro:property name="wrist_roll_upper" value="2.84121"/>
-  <xacro:property name="gripper_lower" value="-1.74533"/>
-  <xacro:property name="gripper_upper" value="0.174533"/>
+  <!-- Joint limits and per-joint effort ceilings.
+       GENERATED VALUES: these mirror the <limit> tags of the current CAD export
+       (urdf/ava_robotic_arm.urdf). ava.kinematics.xacro references them by name so the
+       numbers stay reviewable here rather than buried in the 45-link export. If you
+       re-export the model with changed limits, update these to match. -->
+  <xacro:property name="shoulder_pan_lower" value="-1.570796"/>
+  <xacro:property name="shoulder_pan_upper" value="1.570796"/>
+  <xacro:property name="shoulder_lift_lower" value="-0.212536"/>
+  <xacro:property name="shoulder_lift_upper" value="2.094395"/>
+  <xacro:property name="elbow_flex_lower" value="-1.523672"/>
+  <xacro:property name="elbow_flex_upper" value="1.617920"/>
+  <xacro:property name="wrist_flex_lower" value="-2.617994"/>
+  <xacro:property name="wrist_flex_upper" value="0.523599"/>
+  <xacro:property name="wrist_roll_lower" value="-1.963495"/>
+  <xacro:property name="wrist_roll_upper" value="1.178097"/>
+  <xacro:property name="gripper_lower" value="-0.594434"/>
+  <xacro:property name="gripper_upper" value="0.197952"/>
+
+  <!-- Per-joint effort ceilings (N*m). The redesign is no longer a uniform STS3215 bus:
+       the CAD model is built around MG996R servos at the shoulder and SG90s from the
+       elbow out, so effort now differs per joint instead of sharing max_torque_nm.
+       NOTE: ava.ros2control.xacro still drives this arm as an STS3215 serial bus
+       (motor IDs, EEPROM PID writes). That hardware layer has not been retargeted. -->
+  <xacro:property name="shoulder_pan_effort" value="1.079"/>   <!-- MG996R -->
+  <xacro:property name="shoulder_lift_effort" value="2.157"/>  <!-- MG996R, geared -->
+  <xacro:property name="elbow_flex_effort" value="0.177"/>     <!-- SG90 -->
+  <xacro:property name="wrist_flex_effort" value="0.177"/>      <!-- SG90 -->
+  <xacro:property name="wrist_roll_effort" value="0.177"/>      <!-- SG90 -->
+  <xacro:property name="gripper_effort" value="0.177"/>         <!-- SG90 -->
 
 </robot>

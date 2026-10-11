@@ -1,8 +1,14 @@
 # ava_moveit_config
 
-> **SO-101 migration in progress.** `.setup_assistant`, `ava.srdf` and `joint_limits.yaml`
-> are updated for SO-101 and Gazebo + MoveIt runs. Files marked `TODO(so101-migration)`
-> (`arm_ik.py`, `cup_pick_and_place.py`) still describe the old 5-DOF OmArm arm.
+> **Tracking the CAD redesign.** `ava.srdf` is rebuilt for the in-house CAD model: the
+> arm group tips at `end_effector_link` via `gripper_base_link`, and the collision matrix
+> disables only the 6 adjacent pairs — sampling shows this arm can fold onto itself, so
+> the wider "Never" set the SO-101 SRDF used no longer holds. Named poses are re-verified
+> against the new (asymmetric) joint limits.
+>
+> Still outstanding: `joint_limits.yaml` velocities/accelerations are the old SO-101
+> values and need re-tuning for MG996R/SG90. Files marked `TODO(cad-redesign)`
+> (`arm_ik.py`, `cup_pick_and_place.py`) were never ported off the old 5-DOF OmArm arm.
 
 MoveIt 2 configuration for the AVA arm **plus** the complete computer-vision
 pick-and-place task. Built in **Part 3**

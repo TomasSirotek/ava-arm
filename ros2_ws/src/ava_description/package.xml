@@ -3,11 +3,13 @@
 <package format="3">
   <name>ava_description</name>
   <version>1.0.0</version>
-  <description>URDF/xacro model and meshes for the Ava 6-DOF arm (SO-101).</description>
+  <description>URDF/xacro model and meshes for the Ava 6-DOF arm (in-house CAD design, MG996R + SG90 servos).</description>
   <maintainer email="72190589+TomasSirotek@users.noreply.github.com">Tomas Sirotek</maintainer>
   <author>Omar Draidrya (OmArm Zero)</author>
   <author>Aditya Kamath (so_arm_ros2)</author>
-  <!-- MIT: OmArm Zero launch/config; Apache-2.0: SO-101 xacro (so_arm_ros2) + meshes (SO-ARM100). See ATTRIBUTION.md -->
+  <!-- MIT: OmArm Zero launch/config. The arm model and meshes are now in-house CAD
+       (urdf/ava_robotic_arm.urdf); the SO-101 xacro and SO-ARM100 meshes are no longer
+       used. See ATTRIBUTION.md -->
   <license>MIT</license>
   <license>Apache-2.0</license>
 
