@@ -71,6 +71,10 @@ what forced the redesign in the first place.
 - **Re-measure the wrist-camera extrinsics.** The redesign has no camera mount part, so the
   frames in `ava.common.xacro` are placeholders (`wrist_camera_urdf:=false` omits them).
   Needs a mount designed in CAD first.
+- **Recalibrate the overhead camera.** `ava_vision` assumes `world == base_link` and that
+  `base_link` XY lies on the table at z=0. The root flip broke both: `world` is now
+  `base_footprint` and `base_link` sits 33.7 mm above it, rotated pi about X. Any existing
+  `camera_extrinsics.yaml` is off by that transform.
 - **Port the stale scripts.** `arm_ik.py` and `cup_pick_and_place.py` are still written for
   the original 5-DOF OmArm arm (`TODO(cad-redesign)`), so pick-and-place does not run.
 - **Finish the dashboard placeholders**: Current pose, Solve IK, camera feed, voice.

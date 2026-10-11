@@ -17,7 +17,6 @@ the load, **4× SG90** from the elbow out.
 
 <p align="center"><img src="docs/media/dashboard.png" alt="AVA dashboard: 3D view of the arm with torque and pose cards, joint controls on the right" width="100%"></p>
 
-
 ## The arm model files are supplied locally
 
 The model is kept outside the repo, so these files are git-ignored:
@@ -50,7 +49,7 @@ regenerated — see [ava_description](ros2_ws/src/ava_description/README.md).
 | `LICENSES/` | Third-party license texts (see [ATTRIBUTION.md](ATTRIBUTION.md)). |
 | `dashboard/` | Web dashboard (git submodule, [ava-dashboard](https://github.com/TomasSirotek/ava-dashboard)). |
 | `firmware/` | Microcontroller servo driver. |
-| `hardware/` | BOM, STEP/STL, electronics. |
+| `hardware/` | BOM and electronics (STEP/STL exports are local, not tracked). |
 | `docs/` | Design notes and decision records. |
 | `tools/` | Offline scripts (URDF diff, mesh measurement, torque monitor). |
 

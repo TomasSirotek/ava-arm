@@ -20,8 +20,16 @@ serve as the calibration rig for the camera transform. This is the perception ha
 
 ## TF tree
 
+> **Frames changed with the CAD redesign.** `world == base_link` no longer holds. The
+> robot root is now `base_footprint` (that is what `world` maps to), and `base_link` sits
+> 33.7 mm above it and rotated pi about X, because the CAD export is authored Z-down.
+> The table plane is therefore `base_footprint` z=0, not `base_link` z=0. Any
+> `camera_extrinsics.yaml` calibrated before the redesign is off by that transform, and
+> the nodes below still say `base_link` where they now mean `base_footprint`. Recalibrate
+> against `base_footprint` before trusting `/cup_pose`.
+
 ```
-world == base_link ──(static TF from config/camera_extrinsics.yaml)──
+world == base_footprint ──(static TF from config/camera_extrinsics.yaml)──
    camera_optical_frame ──(detector)── aruco_marker_0 (cube), aruco_marker_1..4 (table)
 ```
 
