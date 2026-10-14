@@ -15,11 +15,11 @@ setup(
         ('share/' + package_name + '/config', glob('config/*.yaml')),
         ('share/' + package_name, ['package.xml']),
     ],
-    install_requires=['setuptools', 'pyyaml'],
+    install_requires=['setuptools'],
     zip_safe=True,
     maintainer='od',
     maintainer_email='od@todo.todo',
-    description='Gamepad teleop, real-hardware bridges and control nodes for the AVA arm',
+    description='Gamepad teleop nodes for the AVA arm',
     license='Apache-2.0',
     extras_require={
         'test': [
@@ -30,9 +30,6 @@ setup(
         'console_scripts': [
             'gamepad_cartesian_node = ava_control.gamepad_cartesian_node:main',
             'gamepad_calibrate_node = ava_control.gamepad_calibrate_node:main',
-            'esp32_servo_bridge_node = ava_control.esp32_servo_bridge_node:main',
-            'hardware_bridge_node = ava_control.hardware_bridge_node:main',
-            'follow_joint_trajectory_bridge = ava_control.follow_joint_trajectory_bridge:main',
             'gripper_mimic_bridge = ava_control.gripper_mimic_bridge:main',
         ],
     },

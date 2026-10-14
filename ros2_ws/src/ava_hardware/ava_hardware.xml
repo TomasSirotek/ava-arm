@@ -1,0 +1,10 @@
+<library path="ava_hardware">
+  <class name="ava_hardware/AvaServoSystem"
+         type="ava_hardware::AvaServoSystem"
+         base_class_type="hardware_interface::SystemInterface">
+    <description>
+      Ava arm hobby PWM servos (3x MG996R, 3x SG90) on a PCA9685 driven by an ESP32 over USB
+      serial (protocol v1). Open loop: the reported state is the last command sent.
+    </description>
+  </class>
+</library>

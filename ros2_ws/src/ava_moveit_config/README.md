@@ -25,7 +25,7 @@ and extended in **Part 4** (`docs/part4-computer-vision-pick-and-place.md`).
 | `config/ros2_controllers.yaml`, `config/moveit_controllers.yaml` | One `joint_trajectory_controller` drives all 7 joints |
 | `launch/demo.launch.py` | MoveIt + RViz with mock hardware |
 | `launch/gazebo_moveit.launch.py` | MoveIt on top of the Gazebo simulation |
-| `launch/real_moveit.launch.py` | MoveIt + the ESP32 hardware bridge (real arm) |
+| `launch/real_moveit.launch.py` | MoveIt + ros2_control on the real arm (includes `ava_hardware real_robot.launch.py`) |
 
 > The SRDF named states `open`/`closed` are calibrated for the **real** gripper
 > (open = servo 180°, closed = servo 0°). The simulation task uses its own values from
@@ -62,9 +62,9 @@ first. `cube_demo.launch.py` is an alternative with RViz mock hardware only.)
 Three terminals (see Part 4 for the full walk-through):
 
 ```bash
-# 1 — robot (MoveIt + ESP32 bridge; arm moves to the ROS-zero pose on start)
+# 1 — robot (MoveIt + ros2_control via ava_hardware; the arm jumps to the all-zero home pose on activation)
 ros2 launch ava_moveit_config real_moveit.launch.py \
-    transport:=serial use_rviz:=true start_at_ros_zero:=true home_on_start:=false
+    serial_port:=/dev/ttyUSB0 use_rviz:=true
 
 # 2 — vision (real overhead camera -> /cup_pose)
 ros2 launch ava_vision vision_bringup.launch.py \

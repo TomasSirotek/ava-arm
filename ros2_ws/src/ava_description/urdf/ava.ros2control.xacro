@@ -2,274 +2,89 @@
 <!-- ros2_control block for the Ava arm.
      This is the ONLY file that changes between sim and real hardware: the
      ros2_control_hardware_type arg (declared in ava.urdf.xacro) picks the <hardware>
-     plugin. Joints, limits and interfaces are identical for every backend.
+     plugin. Joints, limits and the position command interface are identical for every
+     backend; only the real backend gets the servo calibration params, and only the
+     simulated/mock backends export an effort state (the hobby servos cannot measure it;
+     tools/torque_monitor.py reads it in simulation).
      Included by ava.urdf.xacro - not a standalone robot. -->
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:property name="hw_type" value="$(arg ros2_control_hardware_type)"/>
+
+  <!-- One actuated joint. Calibration values come from ava.control.xacro; zero_us (pulse at
+       q = 0) is derived from the pulse at mid-range:
+         zero_us = center_us - direction * (lower + upper) / 2 * servo_us_per_rad -->
+  <xacro:macro name="ava_servo_joint" params="name channel direction center_us max_velocity lower upper">
+    <joint name="${name}">
+      <xacro:if value="${hw_type == 'real'}">
+        <param name="channel">${channel}</param>
+        <param name="zero_us">${center_us - direction * (lower + upper) / 2.0 * servo_us_per_rad}</param>
+        <param name="us_per_rad">${servo_us_per_rad}</param>
+        <param name="direction">${direction}</param>
+        <param name="min_us">${servo_min_us}</param>
+        <param name="max_us">${servo_max_us}</param>
+        <param name="max_velocity">${max_velocity}</param>
+        <param name="min_position">${lower}</param>
+        <param name="max_position">${upper}</param>
+      </xacro:if>
+      <command_interface name="position"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+      <xacro:unless value="${hw_type == 'real'}">
+        <state_interface name="effort"/>
+      </xacro:unless>
+    </joint>
+  </xacro:macro>
 
   <!-- ROS 2 CONTROL -->
   <ros2_control name="ava_control" type="system">
     <hardware>
-      <xacro:if value="${'$(arg ros2_control_hardware_type)' == 'mujoco'}">
+      <xacro:if value="${hw_type == 'mujoco'}">
         <plugin>mujoco_ros2_control/MujocoSystemInterface</plugin>
         <param name="mujoco_model">$(arg mujoco_model)</param>
         <param name="headless">$(arg mujoco_headless)</param>
       </xacro:if>
-      <xacro:if value="${'$(arg ros2_control_hardware_type)' == 'gazebo'}">
+      <xacro:if value="${hw_type == 'gazebo'}">
         <plugin>gz_ros2_control/GazeboSimSystem</plugin>
       </xacro:if>
-      <xacro:if value="${'$(arg ros2_control_hardware_type)' == 'mock_components'}">
+      <xacro:if value="${hw_type == 'mock_components'}">
         <plugin>mock_components/GenericSystem</plugin>
       </xacro:if>
-      <xacro:if value="${'$(arg ros2_control_hardware_type)' == 'real'}">
-        <plugin>sts_hardware_interface/STSHardwareInterface</plugin>
+      <!-- ESP32 + PCA9685 over USB serial (package ava_hardware). NOTE: activation commands
+           every joint to 0 rad, so the arm jumps to the home pose at start-up. -->
+      <xacro:if value="${hw_type == 'real'}">
+        <plugin>ava_hardware/AvaServoSystem</plugin>
         <param name="serial_port">$(arg serial_port)</param>
         <param name="baud_rate">$(arg baud_rate)</param>
-        <param name="communication_timeout_ms">100</param>
-        <param name="use_sync_write">$(arg use_sync_write)</param>
-        <param name="enable_mock_mode">$(arg use_mock)</param>
-        <param name="reset_states_on_activate">true</param>
+        <param name="handshake_timeout_ms">${servo_handshake_timeout_ms}</param>
+        <param name="release_on_deactivate">${str(servo_release_on_deactivate).lower()}</param>
       </xacro:if>
     </hardware>
 
-    <joint name="shoulder_pan">
-      <param name="motor_id">$(arg shoulder_pan_motor_id)</param>
-      <param name="operating_mode">$(arg arm_operating_mode)</param>
-      <param name="min_position">${shoulder_pan_lower}</param>
-      <param name="max_position">${shoulder_pan_upper}</param>
-      <!-- Motor-specific, model-dependent parameter (per joint so different STS models can share this bus) -->
-      <param name="max_velocity_steps">${sts_protocol_max_vel_steps}</param>
-      <param name="max_velocity">${max_velocity_rads}</param>
-      <param name="position_center_steps">2048</param>
-      <param name="p_coefficient">$(arg shoulder_pan_p_coefficient)</param>
-      <param name="d_coefficient">$(arg shoulder_pan_d_coefficient)</param>
-      <param name="i_coefficient">$(arg shoulder_pan_i_coefficient)</param>
-      <param name="deadband">$(arg deadband)</param>
-      <!-- Undocumented STS3215 EEPROM tuning registers (community-discovered). Uncomment to enable;
-           internal_max_vel/internal_max_acc/internal_acc_coeff: [0,254], internal_control_period: [1,254].
-      <param name="internal_max_vel">65</param>
-      <param name="internal_max_acc">254</param>
-      <param name="internal_acc_coeff">0</param>
-      <param name="internal_control_period">20</param>
-      -->
-      <!-- cmd interfaces depend on arm_operating_mode -->
-      <xacro:if value="${'$(arg arm_operating_mode)' == '2'}">
-        <command_interface name="effort"/>
-      </xacro:if>
-      <xacro:unless value="${'$(arg arm_operating_mode)' == '2'}">
-        <command_interface name="position"/>
-        <command_interface name="velocity"/>
-      </xacro:unless>
-      <state_interface name="position"/>
-      <state_interface name="velocity"/>
-      <state_interface name="effort"/>
-      <!-- real hardware only -->
-      <xacro:if value="${'$(arg ros2_control_hardware_type)' == 'real'}">
-        <state_interface name="voltage"/>
-        <state_interface name="temperature"/>
-        <state_interface name="current"/>
-        <state_interface name="is_moving"/>
-      </xacro:if>
-    </joint>
-
-    <joint name="shoulder_lift">
-      <param name="motor_id">$(arg shoulder_lift_motor_id)</param>
-      <param name="operating_mode">$(arg arm_operating_mode)</param>
-      <param name="min_position">${shoulder_lift_lower}</param>
-      <param name="max_position">${shoulder_lift_upper}</param>
-      <!-- Motor-specific, model-dependent parameter (per joint so different STS models can share this bus) -->
-      <param name="max_velocity_steps">${sts_protocol_max_vel_steps}</param>
-      <param name="max_velocity">${max_velocity_rads}</param>
-      <param name="position_center_steps">2048</param>
-      <param name="p_coefficient">$(arg shoulder_lift_p_coefficient)</param>
-      <param name="d_coefficient">$(arg shoulder_lift_d_coefficient)</param>
-      <param name="i_coefficient">$(arg shoulder_lift_i_coefficient)</param>
-      <param name="deadband">$(arg deadband)</param>
-      <!-- Undocumented STS3215 EEPROM tuning registers (community-discovered). Uncomment to enable;
-           internal_max_vel/internal_max_acc/internal_acc_coeff: [0,254], internal_control_period: [1,254].
-      <param name="internal_max_vel">65</param>
-      <param name="internal_max_acc">254</param>
-      <param name="internal_acc_coeff">0</param>
-      <param name="internal_control_period">20</param>
-      -->
-      <!-- cmd interfaces depend on arm_operating_mode -->
-      <xacro:if value="${'$(arg arm_operating_mode)' == '2'}">
-        <command_interface name="effort"/>
-      </xacro:if>
-      <xacro:unless value="${'$(arg arm_operating_mode)' == '2'}">
-        <command_interface name="position"/>
-        <command_interface name="velocity"/>
-      </xacro:unless>
-      <state_interface name="position"/>
-      <state_interface name="velocity"/>
-      <state_interface name="effort"/>
-      <!-- real hardware only -->
-      <xacro:if value="${'$(arg ros2_control_hardware_type)' == 'real'}">
-        <state_interface name="voltage"/>
-        <state_interface name="temperature"/>
-        <state_interface name="current"/>
-        <state_interface name="is_moving"/>
-      </xacro:if>
-    </joint>
-
-    <joint name="elbow_flex">
-      <param name="motor_id">$(arg elbow_flex_motor_id)</param>
-      <param name="operating_mode">$(arg arm_operating_mode)</param>
-      <param name="min_position">${elbow_flex_lower}</param>
-      <param name="max_position">${elbow_flex_upper}</param>
-      <!-- Motor-specific, model-dependent parameter (per joint so different STS models can share this bus) -->
-      <param name="max_velocity_steps">${sts_protocol_max_vel_steps}</param>
-      <param name="max_velocity">${max_velocity_rads}</param>
-      <param name="position_center_steps">2048</param>
-      <param name="p_coefficient">$(arg elbow_flex_p_coefficient)</param>
-      <param name="d_coefficient">$(arg elbow_flex_d_coefficient)</param>
-      <param name="i_coefficient">$(arg elbow_flex_i_coefficient)</param>
-      <param name="deadband">$(arg deadband)</param>
-      <!-- Undocumented STS3215 EEPROM tuning registers (community-discovered). Uncomment to enable;
-           internal_max_vel/internal_max_acc/internal_acc_coeff: [0,254], internal_control_period: [1,254].
-      <param name="internal_max_vel">65</param>
-      <param name="internal_max_acc">254</param>
-      <param name="internal_acc_coeff">0</param>
-      <param name="internal_control_period">20</param>
-      -->
-      <!-- cmd interfaces depend on arm_operating_mode -->
-      <xacro:if value="${'$(arg arm_operating_mode)' == '2'}">
-        <command_interface name="effort"/>
-      </xacro:if>
-      <xacro:unless value="${'$(arg arm_operating_mode)' == '2'}">
-        <command_interface name="position"/>
-        <command_interface name="velocity"/>
-      </xacro:unless>
-      <state_interface name="position"/>
-      <state_interface name="velocity"/>
-      <state_interface name="effort"/>
-      <!-- real hardware only -->
-      <xacro:if value="${'$(arg ros2_control_hardware_type)' == 'real'}">
-        <state_interface name="voltage"/>
-        <state_interface name="temperature"/>
-        <state_interface name="current"/>
-        <state_interface name="is_moving"/>
-      </xacro:if>
-    </joint>
-
-    <joint name="wrist_flex">
-      <param name="motor_id">$(arg wrist_flex_motor_id)</param>
-      <param name="operating_mode">$(arg arm_operating_mode)</param>
-      <param name="min_position">${wrist_flex_lower}</param>
-      <param name="max_position">${wrist_flex_upper}</param>
-      <!-- Motor-specific, model-dependent parameter (per joint so different STS models can share this bus) -->
-      <param name="max_velocity_steps">${sts_protocol_max_vel_steps}</param>
-      <param name="max_velocity">${max_velocity_rads}</param>
-      <param name="position_center_steps">2048</param>
-      <param name="p_coefficient">$(arg wrist_flex_p_coefficient)</param>
-      <param name="d_coefficient">$(arg wrist_flex_d_coefficient)</param>
-      <param name="i_coefficient">$(arg wrist_flex_i_coefficient)</param>
-      <param name="deadband">$(arg deadband)</param>
-      <!-- Undocumented STS3215 EEPROM tuning registers (community-discovered). Uncomment to enable;
-           internal_max_vel/internal_max_acc/internal_acc_coeff: [0,254], internal_control_period: [1,254].
-      <param name="internal_max_vel">65</param>
-      <param name="internal_max_acc">254</param>
-      <param name="internal_acc_coeff">0</param>
-      <param name="internal_control_period">20</param>
-      -->
-      <!-- cmd interfaces depend on arm_operating_mode -->
-      <xacro:if value="${'$(arg arm_operating_mode)' == '2'}">
-        <command_interface name="effort"/>
-      </xacro:if>
-      <xacro:unless value="${'$(arg arm_operating_mode)' == '2'}">
-        <command_interface name="position"/>
-        <command_interface name="velocity"/>
-      </xacro:unless>
-      <state_interface name="position"/>
-      <state_interface name="velocity"/>
-      <state_interface name="effort"/>
-      <!-- real hardware only -->
-      <xacro:if value="${'$(arg ros2_control_hardware_type)' == 'real'}">
-        <state_interface name="voltage"/>
-        <state_interface name="temperature"/>
-        <state_interface name="current"/>
-        <state_interface name="is_moving"/>
-      </xacro:if>
-    </joint>
-
-    <joint name="wrist_roll">
-      <param name="motor_id">$(arg wrist_roll_motor_id)</param>
-      <param name="operating_mode">$(arg arm_operating_mode)</param>
-      <param name="min_position">${wrist_roll_lower}</param>
-      <param name="max_position">${wrist_roll_upper}</param>
-      <!-- Motor-specific, model-dependent parameter (per joint so different STS models can share this bus) -->
-      <param name="max_velocity_steps">${sts_protocol_max_vel_steps}</param>
-      <param name="max_velocity">${max_velocity_rads}</param>
-      <param name="position_center_steps">2048</param>
-      <param name="p_coefficient">$(arg wrist_roll_p_coefficient)</param>
-      <param name="d_coefficient">$(arg wrist_roll_d_coefficient)</param>
-      <param name="i_coefficient">$(arg wrist_roll_i_coefficient)</param>
-      <param name="deadband">$(arg deadband)</param>
-      <!-- Undocumented STS3215 EEPROM tuning registers (community-discovered). Uncomment to enable;
-           internal_max_vel/internal_max_acc/internal_acc_coeff: [0,254], internal_control_period: [1,254].
-      <param name="internal_max_vel">65</param>
-      <param name="internal_max_acc">254</param>
-      <param name="internal_acc_coeff">0</param>
-      <param name="internal_control_period">20</param>
-      -->
-      <!-- cmd interfaces depend on arm_operating_mode -->
-      <xacro:if value="${'$(arg arm_operating_mode)' == '2'}">
-        <command_interface name="effort"/>
-      </xacro:if>
-      <xacro:unless value="${'$(arg arm_operating_mode)' == '2'}">
-        <command_interface name="position"/>
-        <command_interface name="velocity"/>
-      </xacro:unless>
-      <state_interface name="position"/>
-      <state_interface name="velocity"/>
-      <state_interface name="effort"/>
-      <!-- real hardware only -->
-      <xacro:if value="${'$(arg ros2_control_hardware_type)' == 'real'}">
-        <state_interface name="voltage"/>
-        <state_interface name="temperature"/>
-        <state_interface name="current"/>
-        <state_interface name="is_moving"/>
-      </xacro:if>
-    </joint>
-
-    <joint name="gripper">
-      <param name="motor_id">$(arg gripper_motor_id)</param>
-      <param name="operating_mode">$(arg gripper_operating_mode)</param>
-      <param name="min_position">${gripper_lower}</param>
-      <param name="max_position">${gripper_upper}</param>
-      <!-- Motor-specific, model-dependent parameter (per joint so different STS models can share this bus) -->
-      <param name="max_velocity_steps">${sts_protocol_max_vel_steps}</param>
-      <param name="max_velocity">${max_velocity_rads}</param>
-      <param name="position_center_steps">2048</param>
-      <param name="p_coefficient">$(arg gripper_p_coefficient)</param>
-      <param name="d_coefficient">$(arg gripper_d_coefficient)</param>
-      <param name="i_coefficient">$(arg gripper_i_coefficient)</param>
-      <param name="deadband">$(arg deadband)</param>
-      <!-- Undocumented STS3215 EEPROM tuning registers (community-discovered). Uncomment to enable;
-           internal_max_vel/internal_max_acc/internal_acc_coeff: [0,254], internal_control_period: [1,254].
-      <param name="internal_max_vel">65</param>
-      <param name="internal_max_acc">254</param>
-      <param name="internal_acc_coeff">0</param>
-      <param name="internal_control_period">20</param>
-      -->
-      <!-- cmd interfaces depend on gripper_operating_mode -->
-      <xacro:if value="${'$(arg gripper_operating_mode)' == '2'}">
-        <command_interface name="effort"/>
-      </xacro:if>
-      <xacro:unless value="${'$(arg gripper_operating_mode)' == '2'}">
-        <command_interface name="position"/>
-        <command_interface name="velocity"/>
-      </xacro:unless>
-      <state_interface name="position"/>
-      <state_interface name="velocity"/>
-      <state_interface name="effort"/>
-      <!-- real hardware only -->
-      <xacro:if value="${'$(arg ros2_control_hardware_type)' == 'real'}">
-        <state_interface name="voltage"/>
-        <state_interface name="temperature"/>
-        <state_interface name="current"/>
-        <state_interface name="is_moving"/>
-      </xacro:if>
-    </joint>
+    <xacro:ava_servo_joint name="shoulder_pan" channel="${shoulder_pan_channel}"
+      direction="${shoulder_pan_direction}" center_us="${shoulder_pan_center_us}"
+      max_velocity="${shoulder_pan_max_velocity}"
+      lower="${shoulder_pan_lower}" upper="${shoulder_pan_upper}"/>
+    <xacro:ava_servo_joint name="shoulder_lift" channel="${shoulder_lift_channel}"
+      direction="${shoulder_lift_direction}" center_us="${shoulder_lift_center_us}"
+      max_velocity="${shoulder_lift_max_velocity}"
+      lower="${shoulder_lift_lower}" upper="${shoulder_lift_upper}"/>
+    <xacro:ava_servo_joint name="elbow_flex" channel="${elbow_flex_channel}"
+      direction="${elbow_flex_direction}" center_us="${elbow_flex_center_us}"
+      max_velocity="${elbow_flex_max_velocity}"
+      lower="${elbow_flex_lower}" upper="${elbow_flex_upper}"/>
+    <xacro:ava_servo_joint name="wrist_flex" channel="${wrist_flex_channel}"
+      direction="${wrist_flex_direction}" center_us="${wrist_flex_center_us}"
+      max_velocity="${wrist_flex_max_velocity}"
+      lower="${wrist_flex_lower}" upper="${wrist_flex_upper}"/>
+    <xacro:ava_servo_joint name="wrist_roll" channel="${wrist_roll_channel}"
+      direction="${wrist_roll_direction}" center_us="${wrist_roll_center_us}"
+      max_velocity="${wrist_roll_max_velocity}"
+      lower="${wrist_roll_lower}" upper="${wrist_roll_upper}"/>
+    <xacro:ava_servo_joint name="gripper" channel="${gripper_channel}"
+      direction="${gripper_direction}" center_us="${gripper_center_us}"
+      max_velocity="${gripper_max_velocity}"
+      lower="${gripper_lower}" upper="${gripper_upper}"/>
   </ros2_control>
 
 </robot>

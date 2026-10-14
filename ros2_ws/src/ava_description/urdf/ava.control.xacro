@@ -1,58 +1,69 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
 
-  <!-- Shared hardware interface parameters (single STS servo bus) -->
-  <xacro:property name="serial_port" default="/dev/ttySERVO"/>
-  <xacro:property name="baud_rate" default="1000000"/>
-  <xacro:property name="use_mock" default="false"/>
-  <xacro:property name="use_sync_write" default="true"/>
+  <!-- Real-hardware calibration for the PWM servos (ros2_control_hardware_type:=real only).
+       Servos sit on a PCA9685 (I2C 0x40, 50 Hz) driven by an ESP32 over USB serial; the
+       ava_hardware/AvaServoSystem plugin turns joint angles into pulse widths:
+         us = round(zero_us + direction * q * servo_us_per_rad), clamped to [servo_min_us, servo_max_us]
+       zero_us is derived in ava.ros2control.xacro from the per-joint centre pulse:
+         zero_us = center_us - direction * (lower + upper) / 2 * servo_us_per_rad
+       Hobby servos give NO feedback: the reported joint state is the last command sent. -->
 
-  <!-- Motor IDs -->
-  <xacro:property name="shoulder_pan_motor_id" value="1"/>
-  <xacro:property name="shoulder_lift_motor_id" value="2"/>
-  <xacro:property name="elbow_flex_motor_id" value="3"/>
-  <xacro:property name="wrist_flex_motor_id" value="4"/>
-  <xacro:property name="wrist_roll_motor_id" value="5"/>
-  <xacro:property name="gripper_motor_id" value="6"/>
-  <xacro:property name="arm_operating_mode" value="0"/>     <!-- Arm joints 1-5: 0=Position, 1=Velocity, 2=PWM/Effort -->
-  <xacro:property name="gripper_operating_mode" value="0"/> <!-- Gripper joint 6: 0=Position, 1=Velocity, 2=PWM/Effort -->
+  <!-- Pulse scale. UNCALIBRATED: assumes 500-2500 us sweeps 180 deg on every servo. Measure
+       the real sweep of each servo and adjust (per-joint scales would go here). -->
+  <xacro:property name="servo_us_per_rad" value="${2000 / pi}"/>
+  <xacro:property name="servo_min_us" value="500"/>
+  <xacro:property name="servo_max_us" value="2500"/>
 
-  <!-- Motor-specific, model-dependent parameter (written to every joint below so different
-       STS models could share this bus) -->
-  <xacro:property name="sts_protocol_max_vel_steps" value="65535"/>  <!-- protocol's own u16 ceiling - let servo firmware, not us, set the real cap -->
+  <!-- Serial link to the ESP32. The ESP32 resets when the port is opened, so the handshake
+       waits for it to boot. release_on_deactivate=true sends "D" (all servos limp) when the
+       hardware is deactivated; false keeps the last pulses held. -->
+  <xacro:property name="servo_handshake_timeout_ms" value="4000"/>
+  <xacro:property name="servo_release_on_deactivate" value="false"/>
 
-  <!-- Maximum allowable torque/velocity for each motor -->
-  <xacro:property name="max_velocity_steps" value="${sts_protocol_max_vel_steps}"/>  <!-- full hardware max -->
-  <xacro:property name="max_velocity_rads" value="${max_velocity_steps*2*pi/4096}"/>  <!-- rad/s -->
-  <xacro:property name="max_torque_nm" value="2.942"/>  <!-- N⋅m (30 kgf⋅cm for STS3215) -->
+  <!-- PCA9685 channel per joint (J-number = channel + 1). -->
+  <xacro:property name="shoulder_pan_channel" value="0"/>   <!-- J1 MG996R -->
+  <xacro:property name="shoulder_lift_channel" value="1"/>  <!-- J2 MG996R -->
+  <xacro:property name="elbow_flex_channel" value="2"/>     <!-- J3 MG996R -->
+  <xacro:property name="wrist_flex_channel" value="3"/>     <!-- J4 SG90 -->
+  <xacro:property name="wrist_roll_channel" value="4"/>     <!-- J5 SG90 -->
+  <xacro:property name="gripper_channel" value="5"/>        <!-- J6 SG90 -->
 
-  <!-- Position-mode (Mode 0) internal servo PID, written to EEPROM on activate -->
-  <xacro:property name="shoulder_pan_p_coefficient" value="14"/>
-  <xacro:property name="shoulder_pan_d_coefficient" value="24"/>
-  <xacro:property name="shoulder_pan_i_coefficient" value="0"/>
-  <xacro:property name="shoulder_lift_p_coefficient" value="14"/>
-  <xacro:property name="shoulder_lift_d_coefficient" value="24"/>
-  <xacro:property name="shoulder_lift_i_coefficient" value="0"/>
-  <xacro:property name="elbow_flex_p_coefficient" value="14"/>
-  <xacro:property name="elbow_flex_d_coefficient" value="24"/>
-  <xacro:property name="elbow_flex_i_coefficient" value="0"/>
-  <xacro:property name="wrist_flex_p_coefficient" value="14"/>
-  <xacro:property name="wrist_flex_d_coefficient" value="24"/>
-  <xacro:property name="wrist_flex_i_coefficient" value="0"/>
-  <xacro:property name="wrist_roll_p_coefficient" value="14"/>
-  <xacro:property name="wrist_roll_d_coefficient" value="24"/>
-  <xacro:property name="wrist_roll_i_coefficient" value="0"/>
-  <xacro:property name="gripper_p_coefficient" value="14"/>
-  <xacro:property name="gripper_d_coefficient" value="24"/>
-  <xacro:property name="gripper_i_coefficient" value="0"/>
-  <!-- Position insensitive-area (CW_DEAD/CCW_DEAD, both set to this value) -->
-  <xacro:property name="deadband" value="10"/>
+  <!-- Rotation sense: 1 if a larger pulse turns the joint towards +q, -1 otherwise.
+       UNCALIBRATED: verify each joint on the bench and flip as needed. -->
+  <xacro:property name="shoulder_pan_direction" value="1"/>
+  <xacro:property name="shoulder_lift_direction" value="1"/>
+  <xacro:property name="elbow_flex_direction" value="1"/>
+  <xacro:property name="wrist_flex_direction" value="1"/>
+  <xacro:property name="wrist_roll_direction" value="1"/>
+  <xacro:property name="gripper_direction" value="1"/>
 
-  <!-- Joint limits and per-joint effort ceilings.
+  <!-- Pulse (us) at the MIDDLE of each joint's range, (lower + upper) / 2. Assembly rule: mount
+       each horn so the joint sits mid-range while the servo is centred at 1500 us; then trim
+       these values on the bench to remove the spline offset. -->
+  <xacro:property name="shoulder_pan_center_us" value="1500"/>
+  <xacro:property name="shoulder_lift_center_us" value="1500"/>
+  <xacro:property name="elbow_flex_center_us" value="1500"/>
+  <xacro:property name="wrist_flex_center_us" value="1500"/>
+  <xacro:property name="wrist_roll_center_us" value="1500"/>
+  <xacro:property name="gripper_center_us" value="1500"/>
+
+  <!-- Rate limit (rad/s) the plugin applies to every command step. No-load servo speeds:
+       MG996R 0.13 s/60 deg @ 6 V (shop listing) = 8.06 rad/s;
+       SG90 0.12 s/60 deg (datasheet) = 8.73 rad/s. Under load they are slower. -->
+  <xacro:property name="shoulder_pan_max_velocity" value="8.06"/>   <!-- MG996R -->
+  <xacro:property name="shoulder_lift_max_velocity" value="8.06"/>  <!-- MG996R -->
+  <xacro:property name="elbow_flex_max_velocity" value="8.06"/>     <!-- MG996R -->
+  <xacro:property name="wrist_flex_max_velocity" value="8.73"/>     <!-- SG90 -->
+  <xacro:property name="wrist_roll_max_velocity" value="8.73"/>     <!-- SG90 -->
+  <xacro:property name="gripper_max_velocity" value="8.73"/>        <!-- SG90 -->
+
+  <!-- Joint limits.
        GENERATED VALUES: these mirror the <limit> tags of the current CAD export
        (urdf/ava_robotic_arm.urdf). ava.kinematics.xacro references them by name so the
        numbers stay reviewable here rather than buried in the 45-link export. If you
-       re-export the model with changed limits, update these to match. -->
+       re-export the model with changed limits, update these to match. The effort
+       ceilings further down are set from the servo layout, not copied from the export. -->
   <xacro:property name="shoulder_pan_lower" value="-1.570796"/>
   <xacro:property name="shoulder_pan_upper" value="1.570796"/>
   <xacro:property name="shoulder_lift_lower" value="-0.212536"/>
@@ -66,16 +77,22 @@
   <xacro:property name="gripper_lower" value="-0.594434"/>
   <xacro:property name="gripper_upper" value="0.197952"/>
 
-  <!-- Per-joint effort ceilings (N*m). The redesign is no longer a uniform STS3215 bus:
-       the CAD model is built around MG996R servos at the shoulder and SG90s from the
-       elbow out, so effort now differs per joint instead of sharing max_torque_nm.
-       NOTE: ava.ros2control.xacro still drives this arm as an STS3215 serial bus
-       (motor IDs, EEPROM PID writes). That hardware layer has not been retargeted. -->
+  <!-- Per-joint effort ceilings (N*m) = servo stall torque at the planned 6.0 V supply.
+       MG996R (shoulder pan, shoulder lift, elbow): 11 kg*cm, TowerPro datasheet at 6 V. The
+         plastic-gear MG996R being bought is listed at 15 kg*cm @ 6 V by the shop; 11 is kept
+         until the real units are measured. Direct drive - there is no gearbox at any joint.
+       SG90 / 9g micro (wrist flex, wrist roll, gripper): 1.6 kg*cm @ 6 V, from the datasheet of
+         the servos in stock (dratek 897; 1.2 kg*cm @ 4.8 V).
+       Each value sits just above the stall used by tools/torque_monitor.py, so a joint pinned
+       at its limit in Gazebo reads as FAIL there.
+       The elbow was moved to MG996R after the SG90 failed the Gazebo load test; the CAD
+       export still shows an SG90 there until it is redrawn (TEMPORARY mass stub in
+       ava.urdf.xacro). -->
   <xacro:property name="shoulder_pan_effort" value="1.079"/>   <!-- MG996R -->
-  <xacro:property name="shoulder_lift_effort" value="2.157"/>  <!-- MG996R, geared -->
-  <xacro:property name="elbow_flex_effort" value="0.177"/>     <!-- SG90 -->
-  <xacro:property name="wrist_flex_effort" value="0.177"/>      <!-- SG90 -->
-  <xacro:property name="wrist_roll_effort" value="0.177"/>      <!-- SG90 -->
-  <xacro:property name="gripper_effort" value="0.177"/>         <!-- SG90 -->
+  <xacro:property name="shoulder_lift_effort" value="1.079"/>  <!-- MG996R -->
+  <xacro:property name="elbow_flex_effort" value="1.079"/>     <!-- MG996R -->
+  <xacro:property name="wrist_flex_effort" value="0.157"/>      <!-- SG90 -->
+  <xacro:property name="wrist_roll_effort" value="0.157"/>      <!-- SG90 -->
+  <xacro:property name="gripper_effort" value="0.157"/>         <!-- SG90 -->
 
 </robot>

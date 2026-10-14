@@ -10,8 +10,11 @@ Three stages so far. Each one is finished unless marked otherwise.
 
 1. **Started on an off-the-shelf SO-101 model** — fastest way to get something moving in
    RViz, Gazebo and MoveIt, and it worked.
-2. **It failed the load test, so the arm is now my own design.** ✅
-3. **Testing the 2× MG996R + 4× SG90 servo layout.** ⬅ *current stage*
+2. **It failed the load test, so the arm is now my own design.** ✅ The Fusion 360 design is
+   still under construction: the elbow MG996R mount is being redrawn and more changes will
+   follow, so dimensions and masses in the current export are not final.
+3. **Testing the servo layout (now 3× MG996R + 3× SG90).** ⬅ *current stage* — Gazebo
+   sweep done: holds up to a 20 g payload (results in `docs/simulation_validation.md`).
 
 ### 1. Why the SO-101 model was dropped
 - Most of the weight and the payload sit at the end of the arm, so the shoulder and elbow
@@ -49,8 +52,15 @@ Three stages so far. Each one is finished unless marked otherwise.
 
 ### 3. Testing the servos ⬅ current stage
 
-The open question is whether 2× MG996R + 4× SG90 actually holds up, since that budget is
+The open question is whether the servo layout actually holds up, since the servo budget is
 what forced the redesign in the first place.
+
+- **Elbow moved from SG90 to MG996R.** In Gazebo the elbow SG90 saturated: the elbow needs
+  ~0.11 N·m to hold the home pose and ~0.26 N·m stretched, against 0.118–0.157 N·m stall for
+  the 9g servos in stock (1.2 / 1.6 kg·cm at 4.8 / 6 V). Layout is now 3× MG996R (pan, lift,
+  elbow) + 3× SG90 (wrist flex, wrist roll, gripper). Simulation updated: elbow effort limit
+  1.079 N·m, `torque_monitor.py`, and a TEMPORARY 46.8 g mass stub on `upper_arm_link`
+  standing in for the heavier servo until the CAD is redrawn.
 
 - [ ] Re-run the Gazebo load test on the new model:
       `ros2 launch ava_description gazebo.launch.py payload_kg:=0.1` with
@@ -61,12 +71,24 @@ what forced the redesign in the first place.
 - [ ] If the shoulder MG996R will not hold, the options are a smaller payload target, a
       counterweight or spring, or a geared shoulder — decide before buying anything.
 - [ ] Re-tune `joint_limits.yaml` velocities and accelerations; they are still the SO-101
-      values and hobby servos are slower.
+      values (1.0–1.5 rad/s, well below the servos' no-load ~8 rad/s).
+- Servo ratings now match the real parts at the planned 6.0 V: SG90 1.6 kg·cm (datasheet of
+  the 9g servos in stock), MG996R 11 kg·cm (TowerPro datasheet; the shop lists 15).
+  `shoulder_lift`'s 2.157 N·m "geared" limit is gone: no joint has a gearbox (the bearings
+  carry side loads, they do not add torque).
+- Testing guide: `docs/simulation_testing_guide.md` (RViz, Gazebo load test, MoveIt, math).
 
 ### Probably next, once the servos are settled
-- **Retarget the hardware layer.** `ava.ros2control.xacro` and `firmware/` still drive an
-  STS3215 serial bus (motor IDs, EEPROM PID writes), but the arm is now MG996R + SG90 on
-  PWM. This is the biggest remaining piece and it blocks running on real hardware.
+- **TODO — finish the hardware layer (parked).** Decided: ESP32 + PCA9685 (I2C 0x40,
+  50 Hz), USB serial, ros2_control plugin. Done: ESP32 firmware
+  (`firmware/ava_servo_driver`, protocol parser host-tested, never flashed); the broken
+  OmArm Python bridges and their configs/launch files are removed; `ava.ros2control.xacro`
+  `real` now selects `ava_hardware/AvaServoSystem` with PWM calibration in
+  `ava.control.xacro`. Remaining: `ros2_ws/src/ava_hardware` is written but parked with
+  `COLCON_IGNORE` — remove it, re-add `<exec_depend>ava_hardware</exec_depend>` to
+  `ava_moveit_config/package.xml`, build, smoke-test against a fake serial device, write its
+  README (wiring, flashing, calibration). Until then `real_moveit.launch.py` and
+  `cube_real.launch.py` cannot start.
 - **Buy and wire the servos**, then bring up one joint at a time against the ESP32.
 - **Re-measure the wrist-camera extrinsics.** The redesign has no camera mount part, so the
   frames in `ava.common.xacro` are placeholders (`wrist_camera_urdf:=false` omits them).
@@ -98,10 +120,16 @@ what forced the redesign in the first place.
 ### Removed
 - The old OmArm Zero model (`ava.xacro`, `ava.gazebo`, `ava.ros2control`, `materials.xacro`) and its meshes.
 - Legacy OmArm ESP32 firmware and electronics files.
+- `ava_control` legacy hardware bridges (`hardware_bridge_node`, `esp32_servo_bridge_node`,
+  `follow_joint_trajectory_bridge`, `resource_manager`, `servo_calibration`), their configs
+  (`hardware.yaml`, `real_robot.yaml`, `controllers.yaml`), `real_robot_*.launch.py` and
+  `README.real.md`. They never sent a joint move (calibration key mismatch) and bypassed
+  ros2_control.
+- STS3215 serial-bus parameters (motor IDs, EEPROM PID, `/dev/ttySERVO`) from the xacro.
 
 ### Known issues
 - `arm_ik.py` and `cup_pick_and_place.py` still describe the old 5-DOF arm (`TODO(so101-migration)`).
-- The `real` hardware option drives Feetech STS servos, not the planned MG996R/SG90.
+- Real hardware cannot run yet: the `ava_hardware` plugin is parked (see the TODO above).
 
 ## 2026-09-24 — Initial import
 - Repo created from the OmArm Zero ROS 2 workspace.

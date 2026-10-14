@@ -1,15 +1,15 @@
 """Real-robot pick-and-place with the overhead ArUco camera (ava).
 
 Identical perception half to cube_demo.launch.py, but drives the REAL hardware
-via real_moveit.launch.py (hardware_bridge_node + follow_joint_trajectory_bridge
-+ move_group) instead of mock hardware. The gripper path is byte-identical
+via real_moveit.launch.py (ros2_control with ava_hardware/AvaServoSystem +
+move_group) instead of mock hardware. The gripper path is byte-identical
 (direct FollowJointTrajectory to /joint_trajectory_controller/...).
 
 Always uses the real camera (use_camera is implied true).
 
 First run WITHOUT run_demo to verify TF / /cup_pose / RViz, then enable it:
   ros2 launch ava_moveit_config cube_real.launch.py \
-      camera_id:=0 camera_info_url:=/path/intrinsics.yaml transport:=serial run_demo:=true
+      camera_id:=0 camera_info_url:=/path/intrinsics.yaml serial_port:=/dev/ttyUSB0 run_demo:=true
 """
 from launch import LaunchDescription
 from launch.actions import (DeclareLaunchArgument, IncludeLaunchDescription,
@@ -23,8 +23,7 @@ from launch_ros.substitutions import FindPackageShare
 def generate_launch_description():
     use_rviz = LaunchConfiguration('use_rviz')
     run_demo = LaunchConfiguration('run_demo')
-    transport = LaunchConfiguration('transport')
-    config_file = LaunchConfiguration('config_file')
+    serial_port = LaunchConfiguration('serial_port')
     camera_id = LaunchConfiguration('camera_id')
     camera_info_url = LaunchConfiguration('camera_info_url')
     mount_yaw = LaunchConfiguration('mount_yaw')
@@ -37,8 +36,7 @@ def generate_launch_description():
             PathJoinSubstitution([moveit_pkg, 'launch', 'real_moveit.launch.py'])),
         launch_arguments={
             'use_rviz': use_rviz,
-            'transport': transport,
-            'config_file': config_file,
+            'serial_port': serial_port,
         }.items(),
     )
 
@@ -78,8 +76,7 @@ def generate_launch_description():
     return LaunchDescription([
         DeclareLaunchArgument('use_rviz', default_value='true'),
         DeclareLaunchArgument('run_demo', default_value='false'),
-        DeclareLaunchArgument('transport', default_value='serial'),
-        DeclareLaunchArgument('config_file', default_value='hardware.yaml'),
+        DeclareLaunchArgument('serial_port', default_value='/dev/ttyUSB0'),
         DeclareLaunchArgument('camera_id', default_value='2'),
         DeclareLaunchArgument('camera_info_url', default_value=''),
         DeclareLaunchArgument('mount_yaw', default_value=''),

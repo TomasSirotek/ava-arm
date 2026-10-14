@@ -17,17 +17,19 @@ import rclpy
 from sensor_msgs.msg import JointState
 
 KGCM_TO_NM = 0.0980665
-# Stall torque (kg·cm). MG996R: TowerPro datasheet at 6 V (9.4 at 4.8 V; "13" in shop listings).
-# SG90: datasheet at 4.8 V. Check against the datasheet of the servos you actually bought.
-SERVOS = {"MG996R": 11.0 * KGCM_TO_NM, "SG90": 1.8 * KGCM_TO_NM}
+# Stall torque (kg·cm) at the planned 6.0 V supply, matching the effort limits in
+# ava_description/urdf/ava.control.xacro. MG996R: TowerPro datasheet at 6 V (9.4 at 4.8 V;
+# the plastic-gear units being bought are listed at 15 by the shop - measure before trusting).
+# SG90: datasheet of the 9g servos in stock (dratek 897), 1.6 at 6 V (1.2 at 4.8 V).
+SERVOS = {"MG996R": 11.0 * KGCM_TO_NM, "SG90": 1.6 * KGCM_TO_NM}
 
-# Which servo drives which joint. Matches the CAD redesign's 2x MG996R + 4x SG90 layout
-# and the per-joint effort limits in ava_description/urdf/ava.control.xacro: the two
-# base joints carry the arm and the load, everything from the elbow out is an SG90.
+# Which servo drives which joint, matching the per-joint effort limits in
+# ava_description/urdf/ava.control.xacro: MG996R on the two shoulder joints and the elbow
+# (the elbow SG90 failed the Gazebo load test), SG90 from the wrist out.
 JOINT_SERVO = {
     "shoulder_pan": "MG996R",
     "shoulder_lift": "MG996R",
-    "elbow_flex": "SG90",
+    "elbow_flex": "MG996R",
     "wrist_flex": "SG90",
     "wrist_roll": "SG90",
     "gripper": "SG90",

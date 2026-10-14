@@ -1,7 +1,9 @@
 # ava_description
 
 URDF/xacro model and STL meshes for **Ava**, a 6-DOF desktop arm. The model is an
-in-house Fusion 360 design built around 2× MG996R (shoulder) + 4× SG90 (elbow out).
+in-house Fusion 360 design with MG996R servos on the shoulder and elbow and SG90s from the
+wrist out. The current CAD export still has an SG90 at the elbow; until it is redrawn,
+`ava.urdf.xacro` adds a TEMPORARY mass stub for the heavier elbow MG996R.
 This package describes the robot and nothing else: it depends on no other `ava_*` package.
 
 ## URDF files
@@ -20,8 +22,8 @@ the payload, the wrist-camera frames, `ros2_control` — lives in the hand-edite
 | `urdf/ava.kinematics.xacro` | **Generated** from the export by `scripts/generate_kinematics_xacro.py`: mesh paths become `package://`, cosmetic collisions are stripped, joint limits become references into `ava.control.xacro`. |
 | `urdf/ava.urdf.xacro` | **Entry point.** Declares the xacro args, includes the kinematics, and adds the frames the exporter does not model. This is the file you pass to `xacro`. |
 | `urdf/ava.common.xacro` | Geometry constants: colours, base mount height, tool frame, wrist-camera poses. |
-| `urdf/ava.control.xacro` | Servo parameters: motor IDs, PID gains, deadband, torque, joint limits. |
-| `urdf/ava.ros2control.xacro` | The `<ros2_control>` block. **The only part that differs between sim and real**, selected by `ros2_control_hardware_type` (`real`, `gazebo`, `mock_components`, `mujoco`). |
+| `urdf/ava.control.xacro` | Servo parameters: PCA9685 channels, pulse calibration (centre pulse, direction, µs/rad, pulse clamp), velocity limits for the real backend; effort ceilings and joint limits. |
+| `urdf/ava.ros2control.xacro` | The `<ros2_control>` block. **The only part that differs between sim and real**, selected by `ros2_control_hardware_type` (`mock_components` default, `real` = `ava_hardware/AvaServoSystem` over USB serial, `gazebo`, `mujoco`). Every backend commands `position`; the effort state exists only in sim/mock. |
 | `urdf/ava.gazebo.xacro` | gz sim plugin that runs ros2_control inside Gazebo. Only included when `ros2_control_hardware_type:=gazebo`. |
 | `urdf/ava.urdf` | **Generated** plain URDF (`mock_components`) for tools that cannot run xacro: web dashboard, MuJoCo, viewers. Committed to git. |
 
@@ -64,14 +66,14 @@ Regenerate `ava.urdf` after any hand edit to the xacro too (step 2 alone).
 
 ## Joints
 
-| Joint | Moves | Servo ID |
-|---|---|---|
-| `shoulder_pan` | whole arm about the vertical axis | 1 |
-| `shoulder_lift` | upper arm | 2 |
-| `elbow_flex` | lower arm | 3 |
-| `wrist_flex` | wrist pitch | 4 |
-| `wrist_roll` | gripper roll | 5 |
-| `gripper` | moving jaw | 6 |
+| Joint | Moves | Servo | PCA9685 channel |
+|---|---|---|---|
+| `shoulder_pan` | whole arm about the vertical axis | MG996R | 0 |
+| `shoulder_lift` | upper arm | MG996R | 1 |
+| `elbow_flex` | lower arm | MG996R | 2 |
+| `wrist_flex` | wrist pitch | SG90 | 3 |
+| `wrist_roll` | gripper roll | SG90 | 4 |
+| `gripper` | moving jaw | SG90 | 5 |
 
 Joint limits are asymmetric and come from CAD — notably `shoulder_lift` runs
 −0.21…+2.09 rad, so poses written for the old model do not carry over.

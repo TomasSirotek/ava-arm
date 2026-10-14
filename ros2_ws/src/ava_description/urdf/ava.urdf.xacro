@@ -4,42 +4,15 @@
   <xacro:include filename="$(find ava_description)/urdf/ava.common.xacro"/>
   <xacro:include filename="$(find ava_description)/urdf/ava.control.xacro"/>
 
-  <!-- Arguments (externally settable, default to property values in ava.control.xacro) -->
-  <xacro:arg name="serial_port"    default="${serial_port}"/>
-  <xacro:arg name="baud_rate"      default="${baud_rate}"/>
-  <xacro:arg name="use_mock"       default="${use_mock}"/>
-  <xacro:arg name="use_sync_write" default="${use_sync_write}"/>
-  <xacro:arg name="arm_operating_mode"     default="${arm_operating_mode}"/>     <!-- 0=Position 1=Velocity 2=PWM; arm joints 1-5; baked at startup -->
-  <xacro:arg name="gripper_operating_mode" default="${gripper_operating_mode}"/> <!-- 0=Position 1=Velocity 2=PWM; gripper joint 6; baked at startup -->
-  <xacro:arg name="shoulder_pan_motor_id" default="${shoulder_pan_motor_id}"/>
-  <xacro:arg name="shoulder_lift_motor_id" default="${shoulder_lift_motor_id}"/>
-  <xacro:arg name="elbow_flex_motor_id" default="${elbow_flex_motor_id}"/>
-  <xacro:arg name="wrist_flex_motor_id" default="${wrist_flex_motor_id}"/>
-  <xacro:arg name="wrist_roll_motor_id" default="${wrist_roll_motor_id}"/>
-  <xacro:arg name="gripper_motor_id" default="${gripper_motor_id}"/>
-  <xacro:arg name="shoulder_pan_p_coefficient" default="${shoulder_pan_p_coefficient}"/>
-  <xacro:arg name="shoulder_pan_d_coefficient" default="${shoulder_pan_d_coefficient}"/>
-  <xacro:arg name="shoulder_pan_i_coefficient" default="${shoulder_pan_i_coefficient}"/>
-  <xacro:arg name="shoulder_lift_p_coefficient" default="${shoulder_lift_p_coefficient}"/>
-  <xacro:arg name="shoulder_lift_d_coefficient" default="${shoulder_lift_d_coefficient}"/>
-  <xacro:arg name="shoulder_lift_i_coefficient" default="${shoulder_lift_i_coefficient}"/>
-  <xacro:arg name="elbow_flex_p_coefficient" default="${elbow_flex_p_coefficient}"/>
-  <xacro:arg name="elbow_flex_d_coefficient" default="${elbow_flex_d_coefficient}"/>
-  <xacro:arg name="elbow_flex_i_coefficient" default="${elbow_flex_i_coefficient}"/>
-  <xacro:arg name="wrist_flex_p_coefficient" default="${wrist_flex_p_coefficient}"/>
-  <xacro:arg name="wrist_flex_d_coefficient" default="${wrist_flex_d_coefficient}"/>
-  <xacro:arg name="wrist_flex_i_coefficient" default="${wrist_flex_i_coefficient}"/>
-  <xacro:arg name="wrist_roll_p_coefficient" default="${wrist_roll_p_coefficient}"/>
-  <xacro:arg name="wrist_roll_d_coefficient" default="${wrist_roll_d_coefficient}"/>
-  <xacro:arg name="wrist_roll_i_coefficient" default="${wrist_roll_i_coefficient}"/>
-  <xacro:arg name="gripper_p_coefficient" default="${gripper_p_coefficient}"/>
-  <xacro:arg name="gripper_d_coefficient" default="${gripper_d_coefficient}"/>
-  <xacro:arg name="gripper_i_coefficient" default="${gripper_i_coefficient}"/>
-  <xacro:arg name="deadband" default="${deadband}"/>
+  <!-- Real hardware only: USB serial port of the ESP32 servo driver and its baud rate. -->
+  <xacro:arg name="serial_port" default="/dev/ttyUSB0"/>
+  <xacro:arg name="baud_rate"   default="115200"/>
 
-  <!-- real=STS serial plugin, gazebo=gz_ros2_control, mujoco=MujocoSystemInterface,
-       mock_components=GenericSystem. Selects the <hardware> block in ava.ros2control.xacro. -->
-  <xacro:arg name="ros2_control_hardware_type" default="real"/>
+  <!-- Selects the <hardware> block in ava.ros2control.xacro:
+       real=ava_hardware/AvaServoSystem (ESP32 + PCA9685 PWM servos over USB serial),
+       gazebo=gz_ros2_control, mujoco=MujocoSystemInterface, mock_components=GenericSystem.
+       Defaults to mock_components so a bare xacro call never talks to hardware. -->
+  <xacro:arg name="ros2_control_hardware_type" default="mock_components"/>
   <!-- mujoco only -->
   <xacro:arg name="mujoco_model" default=""/>
   <xacro:arg name="mujoco_headless" default="false"/>
@@ -106,6 +79,25 @@
       <child link="payload_link"/>
     </joint>
   </xacro:if>
+
+  <!-- TEMPORARY until the redrawn CAD export arrives: the elbow is now an MG996R, but the
+       current export still carries an SG90 body (sg90R_01, 9.5 g) on the upper arm. This
+       point mass adds the difference (MG996R body 56.3 g - SG90 body 9.5 g = 46.8 g) at that
+       SG90's centre of mass, so Gazebo loads the shoulder with the heavier servo. Position is
+       sg90R_01's CoM expressed in upper_arm_link; inertia is a rough 40x19x43 mm box.
+       Delete this block when the new export (with an MG996R at the elbow) is dropped in. -->
+  <link name="elbow_servo_mass_stub">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="0.0468"/>
+      <inertia ixx="1e-5" iyy="1e-5" izz="1e-5" ixy="0" ixz="0" iyz="0"/>
+    </inertial>
+  </link>
+  <joint name="elbow_servo_mass_stub_joint" type="fixed">
+    <parent link="upper_arm_link"/>
+    <child link="elbow_servo_mass_stub"/>
+    <origin xyz="0.0473 -0.0147 -0.1370" rpy="0 0 0"/>
+  </joint>
 
   <!-- WRIST CAMERA: frames only. The redesign has no camera mount part, so the SO-101
        mount and camera-body meshes are gone and these poses are PLACEHOLDERS - the frames

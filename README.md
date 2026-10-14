@@ -7,12 +7,15 @@ The arm started on an off-the-shelf SO-101 model. That model failed the Gazebo l
 test — the weight and the payload sit at the end of the arm, so the shoulder and elbow
 wanted bigger and more expensive servos than the budget allowed, and shortening the
 links barely helped. So the arm was **redrawn from scratch in Fusion 360** (with help
-from a Fusion designer) around a fixed servo budget: **2× MG996R** carrying the arm and
-the load, **4× SG90** from the elbow out.
+from a Fusion designer) around hobby servos: **3× MG996R** on the shoulder and elbow,
+**3× SG90** from the wrist out. (The first budget was 2× MG996R + 4× SG90; the elbow SG90
+could not hold the arm in Gazebo, so the elbow is now an MG996R. The simulation already
+uses it; the CAD is being redrawn.)
 
 > **Status:** the new model runs in RViz, Gazebo and MoveIt, and the web dashboard shows
-> and drives it live. Current stage: **testing whether the 2× MG996R + 4× SG90 layout
-> actually holds** under load in simulation. No hardware connected yet. See
+> and drives it live. The 3× MG996R + 3× SG90 layout holds a **20 g** payload in
+> simulation. The Fusion 360 design is still under construction (elbow mount being
+> redrawn, more changes to come). No hardware connected yet. See
 > [CHANGELOG.md](CHANGELOG.md).
 
 <p align="center"><img src="docs/media/dashboard.png" alt="AVA dashboard: 3D view of the arm with torque and pose cards, joint controls on the right" width="100%"></p>
@@ -42,13 +45,13 @@ regenerated — see [ava_description](ros2_ws/src/ava_description/README.md).
 | Path | What |
 |---|---|
 | `ros2_ws/src/ava_description` | URDF/xacro, meshes. Depends on nothing. |
-| `ros2_ws/src/ava_control` | Control nodes: gamepad teleop, hardware bridges. |
+| `ros2_ws/src/ava_control` | Gamepad teleop nodes. |
 | `ros2_ws/src/ava_moveit_config` | MoveIt 2 config. |
 | `ros2_ws/src/ava_vision` | ArUco perception. |
 | `ros2_ws/src/ava_bringup` | Top-level launch (stub). |
 | `LICENSES/` | Third-party license texts (see [ATTRIBUTION.md](ATTRIBUTION.md)). |
 | `dashboard/` | Web dashboard (git submodule, [ava-dashboard](https://github.com/TomasSirotek/ava-dashboard)). |
-| `firmware/` | Microcontroller servo driver. |
+| `firmware/` | ESP32 servo driver (PCA9685 over USB serial; not flashed yet). |
 | `hardware/` | BOM and electronics (STEP/STL exports are local, not tracked). |
 | `docs/` | Design notes and decision records. |
 | `tools/` | Offline scripts (URDF diff, mesh measurement, torque monitor). |

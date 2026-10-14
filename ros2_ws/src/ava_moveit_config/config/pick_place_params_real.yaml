@@ -2,11 +2,10 @@
 #   ros2 run ava_moveit_config cup_pick_and_place.py --ros-args \
 #     --params-file src/ava_moveit_config/config/pick_place_params_real.yaml
 #
-# Gripper poses = the CURRENT user-confirmed values (same as sim; hardware.yaml
-# direction J6 = -1 handles the real servo mirroring).
-# home_joints = the PROVEN safe real pose. The sim default [0,0,0,0,0] must NEVER be
-# used on the real arm: servo map deg = 90 + dir*(rad-zero)*57.3 puts all servos at
-# their 0/180 end stops (stall -> 5V sag -> all servos misbehave).
+# Gripper poses = the CURRENT user-confirmed values (same as sim); servo direction
+# and pulse calibration live in ava_description/urdf/ava.control.xacro.
+# home_joints = the safe pose of the OLD hardware. It MUST be re-verified on the new
+# PCA9685/hobby-servo hardware (calibration in ava.control.xacro) before use.
 cup_pick_and_place:
   ros__parameters:
     grasp_z: 0.07

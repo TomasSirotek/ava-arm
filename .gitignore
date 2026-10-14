@@ -26,6 +26,12 @@ venv/
 .env
 .env.*
 
+# tmp drawings
+docs/media/arm_side_view_v1.svg
+
+# local agent notes (not shared for now)
+AGENTS.md
+
 # logs and ROS bag recordings (large)
 *.log
 rosbag2_*/

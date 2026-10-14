@@ -1,0 +1,37 @@
+# Controllers for the real arm (ava_hardware/AvaServoSystem). Names and topics match the
+# Gazebo setup: /joint_trajectory_controller/joint_trajectory and
+# /joint_trajectory_controller/follow_joint_trajectory.
+# The servos are open loop, so position/velocity states are the commands the plugin sent.
+controller_manager:
+  ros__parameters:
+    update_rate: 50  # Hz; hobby servos take a new pulse every 20 ms (50 Hz PWM)
+
+    joint_state_broadcaster:
+      type: joint_state_broadcaster/JointStateBroadcaster
+
+    joint_trajectory_controller:
+      type: joint_trajectory_controller/JointTrajectoryController
+
+joint_trajectory_controller:
+  ros__parameters:
+    joints:
+      - shoulder_pan
+      - shoulder_lift
+      - elbow_flex
+      - wrist_flex
+      - wrist_roll
+      - gripper
+
+    command_interfaces:
+      - position
+
+    state_interfaces:
+      - position
+      - velocity
+
+    allow_partial_joints_goal: true
+    action_ns: follow_joint_trajectory
+
+    constraints:
+      stopped_velocity_tolerance: 0.05
+      goal_time: 0.5

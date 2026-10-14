@@ -86,8 +86,8 @@ class CupPickAndPlace(Node):
 
         # Current arm joint state (IK seed + MoveGroup start state).
         self.joint_pos = {}
-        # /joint_states is published BEST_EFFORT by the real hardware_bridge (and
-        # RELIABLE in sim). A BEST_EFFORT subscription is compatible with both.
+        # /joint_states comes from the ros2_control joint_state_broadcaster (sim and
+        # real). A BEST_EFFORT subscription is compatible with any publisher QoS.
         self.create_subscription(JointState, '/joint_states', self._joint_state_cb,
                                  qos_profile_sensor_data)
 
@@ -104,8 +104,8 @@ class CupPickAndPlace(Node):
         self._mg_client = None
         self._mg_lock = threading.Lock()
 
-        # Gripper: direct FollowJointTrajectory action (identical path in
-        # sim [ros2_control JTC] and real [follow_joint_trajectory_bridge]).
+        # Gripper: direct FollowJointTrajectory action to the ros2_control JTC
+        # (identical path in sim and real).
         self._gripper_client = ActionClient(
             self, FollowJointTrajectory,
             '/joint_trajectory_controller/follow_joint_trajectory')
@@ -122,8 +122,8 @@ class CupPickAndPlace(Node):
         self._gripper_closed_pub.publish(Bool(data=False))
 
         # Direct arm-trajectory publisher for the LINEAR descent/ascent: each 1-cm step
-        # is sent as its own single-point command, so sim (JTC topic interface) and real
-        # (hardware bridge forwards each as one MOVE) follow the same straight tcp line.
+        # is sent as its own single-point command to the JTC topic interface, which is the
+        # same in sim and on the real arm, so both follow the same straight tcp line.
         self._arm_traj_pub = self.create_publisher(
             JointTrajectory, '/joint_trajectory_controller/joint_trajectory', 10)
 
@@ -600,9 +600,8 @@ class CupPickAndPlace(Node):
         joint-space arc: z is sampled in `step` increments, each solved with the
         previous step as IK seed (continuous joint path, tcp stays ON the vertical
         line), and each step is sent as its OWN single-point trajectory command.
-        That gives the same straight tcp line in sim (JTC topic interface) and on the
-        real robot (the hardware bridge forwards each step as one MOVE; the firmware
-        ramp smooths between steps).
+        That gives the same straight tcp line in sim and on the real robot (both use the
+        JTC topic interface).
         The FULL IK chain is solved BEFORE any motion — an unreachable intermediate
         height aborts cleanly without moving."""
         chain = self._solve_linear_chain(x, y, z_from, z_to, self._arm_seed(),
