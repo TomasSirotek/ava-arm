@@ -80,15 +80,16 @@ what forced the redesign in the first place.
 
 ### Probably next, once the servos are settled
 - **TODO — finish the hardware layer (parked).** Decided: ESP32 + PCA9685 (I2C 0x40,
-  50 Hz), USB serial, ros2_control plugin. Done: ESP32 firmware
-  (`firmware/ava_servo_driver`, protocol parser host-tested, never flashed); the broken
-  OmArm Python bridges and their configs/launch files are removed; `ava.ros2control.xacro`
-  `real` now selects `ava_hardware/AvaServoSystem` with PWM calibration in
-  `ava.control.xacro`. Remaining: `ros2_ws/src/ava_hardware` is written but parked with
-  `COLCON_IGNORE` — remove it, re-add `<exec_depend>ava_hardware</exec_depend>` to
-  `ava_moveit_config/package.xml`, build, smoke-test against a fake serial device, write its
-  README (wiring, flashing, calibration). Until then `real_moveit.launch.py` and
-  `cube_real.launch.py` cannot start.
+  50 Hz), USB serial, ros2_control plugin. Done: the broken OmArm Python bridges and their
+  configs/launch files are removed; `ava.ros2control.xacro` `real` now selects
+  `ava_hardware/AvaServoSystem` with PWM calibration in `ava.control.xacro`. Remaining:
+  `ros2_ws/src/ava_hardware` is written but parked with `COLCON_IGNORE` — remove it, re-add
+  `<exec_depend>ava_hardware</exec_depend>` to `ava_moveit_config/package.xml`, build,
+  smoke-test against a fake serial device, write its README (wiring, flashing, calibration).
+  Until then `real_moveit.launch.py` and `cube_real.launch.py` cannot start. The ESP32-C3
+  firmware is written by hand once the parts arrive, following
+  `firmware/ava_servo_driver/README.md` (protocol the plugin speaks, wiring, steps).
+- **Buy the parts** in `hardware/bom.md` (688 CZK).
 - **Buy and wire the servos**, then bring up one joint at a time against the ESP32.
 - **Re-measure the wrist-camera extrinsics.** The redesign has no camera mount part, so the
   frames in `ava.common.xacro` are placeholders (`wrist_camera_urdf:=false` omits them).
@@ -99,10 +100,27 @@ what forced the redesign in the first place.
   `camera_extrinsics.yaml` is off by that transform.
 - **Port the stale scripts.** `arm_ik.py` and `cup_pick_and_place.py` are still written for
   the original 5-DOF OmArm arm (`TODO(cad-redesign)`), so pick-and-place does not run.
-- **Finish the dashboard placeholders**: Current pose, Solve IK, camera feed, voice.
+- **Finish the dashboard placeholders**: Solve IK, voice. (Current pose and the camera feed were removed.)
+- **TODO — ROS build in CI (later, once the ROS side is fully tested by hand).** Add
+  `colcon build` + `colcon test` (ament linters) on ROS 2 Jazzy to `.github/workflows/ci.yml` for
+  the packages that build in a clean clone. Needs open decision DW-3 in `docs/dev_workflow.md`
+  first: the CAD export and generated URDF are git-ignored, so CI has no model files.
 - **Fill `ava_bringup`**, which is still an empty stub, so one launch file starts everything.
 
 ### Added
+- CI (`.github/workflows/ci.yml`, was an empty file that failed every push): "Config checks" runs
+  `tests/` (pytest, no ROS); "Dashboard against this repo" runs the dashboard submodule's unit tests
+  with its ROS-contract tests reading this repo's `ava_description`. Status badges in the README.
+- `tests/`: checks that the packages agree: the six joints in every controller config, MoveIt
+  velocity limits within the hardware driver's rate limit, SRDF named poses inside the joint
+  limits, real-arm servo calibration (whole range inside the 500–2500 µs clamp, channels, directions),
+  `torque_monitor.py` stall torques and OK / HOT / FAIL boundaries.
+- Dependabot: daily PR moving `dashboard/` to ava-dashboard's newest `main` commit, auto-merged
+  when CI passes (`dependabot-auto-merge.yml`); weekly workflow-action updates. `main` is protected
+  (pull requests with green CI, admin bypass; `.github/rulesets/main.json`).
+- `hardware/bom.md`: parts to buy (688 CZK) and parts already owned (was an empty file).
+- `firmware/ava_servo_driver/README.md`: what the firmware must do (serial protocol v1 the ROS
+  driver speaks, ESP32-C3 wiring, channel map, learning steps). No firmware code: written by hand later.
 - `tools/torque_monitor.py`: live torque per joint vs its servo (OK / HOT / FAIL); Gazebo `payload_kg:=` option to test with a weight in the gripper.
 - SO-101 robot model in `ava_description` (from [so_arm_ros2](https://github.com/adityakamath/so_arm_ros2), meshes from [SO-ARM100](https://github.com/TheRobotStudio/SO-ARM100)), with a single entry point `ava.urdf.xacro`.
 - `ava.ros2control.xacro`: one switch for `real` / `gazebo` / `mock_components` / `mujoco`.
@@ -120,6 +138,12 @@ what forced the redesign in the first place.
 ### Removed
 - The old OmArm Zero model (`ava.xacro`, `ava.gazebo`, `ava.ros2control`, `materials.xacro`) and its meshes.
 - Legacy OmArm ESP32 firmware and electronics files.
+- Pre-written ESP32 firmware draft (never committed): the firmware is written by hand to learn it.
+- The KiCad project (`hardware/kicad/ava_arm_electronics/`) is kept local (git-ignored) while it is
+  worked on.
+- `docs/` is kept local (git-ignored): design notes, electronics design, test plans and results are
+  not published for now. Earlier entries still name files in it.
+- Two stray files at the root (`and STS3215`, `houlder.`).
 - `ava_control` legacy hardware bridges (`hardware_bridge_node`, `esp32_servo_bridge_node`,
   `follow_joint_trajectory_bridge`, `resource_manager`, `servo_calibration`), their configs
   (`hardware.yaml`, `real_robot.yaml`, `controllers.yaml`), `real_robot_*.launch.py` and

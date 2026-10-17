@@ -22,15 +22,25 @@ firmware/**/.pio/
 .venv/
 venv/
 
+# Design notes, electronics, test plans and results: local only for now (the whole folder).
+# Leading slash = only the top-level docs/ (dashboard/docs/ belongs to the dashboard repo).
+/docs/
+
 # secrets / local env
 .env
 .env.*
 
-# tmp drawings
-docs/media/arm_side_view_v1.svg
-
-# local agent notes (not shared for now)
+# AI-agent files: local only for now (instructions, agent definitions, MCP config).
+# Patterns without a leading slash match in every folder.
+.omp/
+.claude/
+.cursor/
 AGENTS.md
+CLAUDE.md
+GEMINI.md
+.cursorrules
+.mcp.json
+.github/copilot-instructions.md
 
 # logs and ROS bag recordings (large)
 *.log
@@ -66,3 +76,6 @@ hardware/step/*
 *.step
 *.stp
 *.iges
+
+# KiCad electronics project: work in progress, kept local for now
+hardware/kicad/ava_arm_electronics/

@@ -1,0 +1,24 @@
+# Dependabot version updates for ava-arm.
+version: 2
+updates:
+  # The dashboard submodule: once a day, a PR moving `dashboard` to the newest commit on
+  # ava-dashboard's main. CI runs on it and .github/workflows/dependabot-auto-merge.yml merges it
+  # when green, so ava-arm follows the dashboard without manual pointer commits.
+  - package-ecosystem: gitsubmodule
+    directory: /
+    schedule:
+      interval: daily
+    commit-message:
+      prefix: "chore(dashboard)"
+
+  # The actions in .github/workflows (pinned to commit SHAs): weekly, one grouped PR, merged by hand.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: "chore(ci)"

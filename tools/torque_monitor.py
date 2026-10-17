@@ -13,13 +13,13 @@ Usage (ROS sourced, Gazebo running):
 import argparse
 import time
 
-import rclpy
-from sensor_msgs.msg import JointState
+# rclpy / sensor_msgs are imported inside main(), so the servo tables and status() can be
+# imported (and tested, tests/test_torque_monitor.py) without ROS installed.
 
 KGCM_TO_NM = 0.0980665
 # Stall torque (kg·cm) at the planned 6.0 V supply, matching the effort limits in
-# ava_description/urdf/ava.control.xacro. MG996R: TowerPro datasheet at 6 V (9.4 at 4.8 V;
-# the plastic-gear units being bought are listed at 15 by the shop - measure before trusting).
+# ava_description/urdf/ava.control.xacro. MG996R: TowerPro datasheet at 6 V (9.4 at 4.8 V);
+# the metal-gear units on the BOM are listed at the same 11 kg·cm @ 6 V by the shop.
 # SG90: datasheet of the 9g servos in stock (dratek 897), 1.6 at 6 V (1.2 at 4.8 V).
 SERVOS = {"MG996R": 11.0 * KGCM_TO_NM, "SG90": 1.6 * KGCM_TO_NM}
 
@@ -67,6 +67,9 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--once", action="store_true", help="average for 2 s, print once and exit")
     args = ap.parse_args()
+
+    import rclpy
+    from sensor_msgs.msg import JointState
 
     rclpy.init()
     node = rclpy.create_node("torque_monitor")

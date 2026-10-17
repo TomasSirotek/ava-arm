@@ -1,5 +1,8 @@
 # ava-arm
 
+[![CI](https://github.com/TomasSirotek/ava-arm/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/TomasSirotek/ava-arm/actions/workflows/ci.yml)
+[![Dashboard CI](https://github.com/TomasSirotek/ava-dashboard/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/TomasSirotek/ava-dashboard/actions/workflows/ci.yml)
+
 A small 6-DOF desktop arm running ROS 2 Jazzy, built in Gazebo first and on hardware
 second.
 
@@ -18,7 +21,6 @@ uses it; the CAD is being redrawn.)
 > redrawn, more changes to come). No hardware connected yet. See
 > [CHANGELOG.md](CHANGELOG.md).
 
-<p align="center"><img src="docs/media/dashboard.png" alt="AVA dashboard: 3D view of the arm with torque and pose cards, joint controls on the right" width="100%"></p>
 
 ## The arm model files are supplied locally
 
@@ -49,12 +51,13 @@ regenerated — see [ava_description](ros2_ws/src/ava_description/README.md).
 | `ros2_ws/src/ava_moveit_config` | MoveIt 2 config. |
 | `ros2_ws/src/ava_vision` | ArUco perception. |
 | `ros2_ws/src/ava_bringup` | Top-level launch (stub). |
+| `ros2_ws/src/ava_hardware` | ros2_control plugin for the real arm (ESP32 + PCA9685 over USB serial); parked, not built yet. |
 | `LICENSES/` | Third-party license texts (see [ATTRIBUTION.md](ATTRIBUTION.md)). |
 | `dashboard/` | Web dashboard (git submodule, [ava-dashboard](https://github.com/TomasSirotek/ava-dashboard)). |
-| `firmware/` | ESP32 servo driver (PCA9685 over USB serial; not flashed yet). |
-| `hardware/` | BOM and electronics (STEP/STL exports are local, not tracked). |
-| `docs/` | Design notes and decision records. |
-| `tools/` | Offline scripts (URDF diff, mesh measurement, torque monitor). |
+| `firmware/` | ESP32-C3 servo driver: empty PlatformIO project plus a guide to what it must do; to be written by hand once the parts arrive. |
+| `hardware/` | Bill of materials (`bom.md`); STEP/STL exports and the KiCad project are local, not tracked. |
+| `tools/` | Offline scripts: torque monitor (`compare_urdf.py`, `measure_mashes.py` are empty placeholders). |
+| `tests/` | Repo-level checks that the configs of all packages agree (pytest, no ROS needed). |
 
 Dependency direction: bringup -> control -> kinematics -> nothing.
 
@@ -98,6 +101,42 @@ Source both setups first: `source /opt/ros/jazzy/setup.bash && source ros2_ws/in
 | Bridge for the dashboard | `ros2 launch rosbridge_server rosbridge_websocket_launch.xml` | needs `ros-jazzy-rosbridge-suite` |
 | Dashboard | `cd dashboard && pnpm dev` | [dashboard](dashboard/README.md) |
 | Torque check under load | `ros2 launch ava_description gazebo.launch.py payload_kg:=0.1` then `python3 tools/torque_monitor.py` | the current load test |
+
+## Tests and CI
+
+Repo-level checks (no ROS needed): the configs of all packages must agree.
+
+```bash
+pip install -r tests/requirements.txt
+python3 -m pytest tests
+```
+
+| Test file | Checks |
+|---|---|
+| `tests/test_joint_config.py` | the same six joints in every controller config (Gazebo, MoveIt, real arm); MoveIt velocity limits within the hardware driver's rate limit; SRDF named poses inside the joint limits |
+| `tests/test_servo_calibration.py` | the real-arm calibration in `ava.control.xacro`, with the driver's maths: every joint's whole range maps inside the 500–2500 µs pulse clamp, channels 0–5 = J1–J6, directions ±1 |
+| `tests/test_torque_monitor.py` | `tools/torque_monitor.py` uses the URDF effort limits as stall torque; OK / HOT / FAIL boundaries |
+
+GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) runs on every push to
+`main` and on pull requests:
+
+| Job | What |
+|---|---|
+| Config checks | the pytest suite above |
+| Dashboard against this repo | the dashboard submodule's unit tests, including its ROS-contract tests read from `ros2_ws/src/ava_description` (they are skipped in the dashboard repo's own CI); fails if those were skipped |
+
+**Dashboard pointer:** Dependabot ([`.github/dependabot.yml`](.github/dependabot.yml)) checks
+ava-dashboard's `main` daily and opens a PR moving `dashboard/` to its newest commit. Both jobs
+run on it and [`dependabot-auto-merge.yml`](.github/workflows/dependabot-auto-merge.yml) merges it
+when they pass; a failing update stays open for a look. Workflow-action updates come weekly and
+are merged by hand.
+
+**Branch protection** ([`.github/rulesets/main.json`](.github/rulesets/main.json), applied in the
+repo settings, same as the dashboard): `main` takes pull requests with both jobs green, no
+force-push or deletion; repository admins can bypass and push directly.
+
+Not in CI yet: building the ROS packages with colcon (they need the git-ignored model files) and
+the firmware (written by hand later).
 
 ## License
 
