@@ -92,6 +92,19 @@ colcon build --symlink-install
 ## Run
 
 Use a normal terminal, not VS Code's integrated one (the VS Code snap breaks RViz/Gazebo).
+
+**One-time setup: keep ROS 2 on this machine.** Ava runs as one machine and one arm, so ROS 2
+programs only need to find each other on this computer. Add this line to `~/.bashrc` once:
+
+```bash
+export ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST
+```
+
+Open a new terminal, check that `printenv ROS_AUTOMATIC_DISCOVERY_RANGE` prints `LOCALHOST`, and
+run `ros2 daemon stop` once. Without it, ROS 2 (Jazzy) looks for other ROS programs on the whole
+local network and accepts their messages. This is a per-user shell setting, not something the
+repo can enforce. Remove the line only if ROS ever has to run across two computers.
+
 Source both setups first: `source /opt/ros/jazzy/setup.bash && source ros2_ws/install/setup.bash`.
 
 | What | Command | Details |
@@ -137,6 +150,48 @@ force-push or deletion; repository admins can bypass and push directly.
 
 Not in CI yet: building the ROS packages with colcon (they need the git-ignored model files) and
 the firmware (written by hand later).
+
+## Security
+
+Ava is a development project meant to run **on one machine**, not on a network. Nothing here is
+hardened for LAN or internet exposure, and parts of it can move a physical arm, so treat every
+command interface as safety-relevant.
+
+**In place:**
+
+- Supply chain: CI installs from frozen lockfiles, fails on fixable high/critical advisories
+  (dashboard), runs CodeQL on the dashboard, and Dependabot proposes updates. Workflow actions are
+  pinned to commit SHAs, workflows run with a read-only token (the Dependabot auto-merge job is the
+  only one with write access, limited to Dependabot's dashboard-update PRs), checkout drops
+  credentials, and no repository secrets are used.
+- Secret scanning with push protection, and `main` protected (pull requests with green CI) in
+  both repos.
+- The real-arm driver (`ava_hardware`, not yet built) clamps every command to the URDF joint
+  limits, rate-limits each joint and clamps servo pulses to 500–2500 µs.
+
+**Not in place (known limitations):**
+
+- No authentication anywhere. The dashboard, rosbridge and the ROS 2 topics accept commands from
+  anyone who can reach them.
+- rosbridge's defaults listen on **all network interfaces** with no topic or service restriction,
+  and no check of which web page a connection comes from: any page open in a browser on the same
+  machine can connect to `ws://localhost:9090`.
+- ROS 2 discovery reaches the whole local network unless the one-time setup above
+  (`ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST`) is applied.
+
+**Recommended while running on one machine** (not yet the documented default):
+
+```bash
+ros2 launch rosbridge_server rosbridge_websocket_launch.xml address:=127.0.0.1   # rosbridge on localhost only
+cd dashboard/dist && python3 -m http.server 8080 --bind 127.0.0.1         # if serving the built dashboard
+```
+
+While rosbridge runs, use a separate browser profile for the dashboard and don't browse other
+sites in it.
+
+Do not run Ava on an untrusted or shared network, and do not expose ports 9090 (rosbridge),
+5173 (dashboard dev server) or ROS 2/DDS traffic to it. If you find a security problem, contact
+the author through GitHub rather than opening a public issue with details.
 
 ## License
 
