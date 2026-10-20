@@ -89,8 +89,8 @@ what forced the redesign in the first place.
   Until then `real_moveit.launch.py` and `cube_real.launch.py` cannot start. The ESP32-C3
   firmware is written by hand once the parts arrive, following
   `firmware/ava_servo_driver/README.md` (protocol the plugin speaks, wiring, steps).
-- **Buy the parts** in `hardware/bom.md` (688 CZK).
-- **Buy and wire the servos**, then bring up one joint at a time against the ESP32.
+- **Wire the electronics** in `hardware/bom.md` (set the XL4016 to 6.0 V with a multimeter before
+  connecting the PCA9685), then bring up one joint at a time against the ESP32.
 - **Re-measure the wrist-camera extrinsics.** The redesign has no camera mount part, so the
   frames in `ava.common.xacro` are placeholders (`wrist_camera_urdf:=false` omits them).
   Needs a mount designed in CAD first.
@@ -118,7 +118,8 @@ what forced the redesign in the first place.
 - Dependabot: daily PR moving `dashboard/` to ava-dashboard's newest `main` commit, auto-merged
   when CI passes (`dependabot-auto-merge.yml`); weekly workflow-action updates. `main` is protected
   (pull requests with green CI, admin bypass; `.github/rulesets/main.json`).
-- `hardware/bom.md`: parts to buy (688 CZK) and parts already owned (was an empty file).
+- `hardware/bom.md`: parts list with key specs and prices in CZK and EUR (701 CZK / 28.82 EUR)
+  (was an empty file).
 - `firmware/ava_servo_driver/README.md`: what the firmware must do (serial protocol v1 the ROS
   driver speaks, ESP32-C3 wiring, channel map, learning steps). No firmware code: written by hand later.
 - `tools/torque_monitor.py`: live torque per joint vs its servo (OK / HOT / FAIL); Gazebo `payload_kg:=` option to test with a weight in the gripper.
