@@ -3,44 +3,17 @@
 [![CI](https://github.com/TomasSirotek/ava-arm/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/TomasSirotek/ava-arm/actions/workflows/ci.yml)
 [![Dashboard CI](https://github.com/TomasSirotek/ava-dashboard/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/TomasSirotek/ava-dashboard/actions/workflows/ci.yml)
 
-A small 6-DOF desktop arm running ROS 2 Jazzy, built in Gazebo first and on hardware
-second.
+A small 6-DOF desktop arm running ROS 2 Jazzy. In-house Fusion 360 design with 3× MG996R
+(shoulder pan, shoulder lift, elbow) and 3× SG90 (wrist flex, wrist roll, gripper).
 
-The arm started on an off-the-shelf SO-101 model. That model failed the Gazebo load
-test — the weight and the payload sit at the end of the arm, so the shoulder and elbow
-wanted bigger and more expensive servos than the budget allowed, and shortening the
-links barely helped. So the arm was **redrawn from scratch in Fusion 360** (with help
-from a Fusion designer) around hobby servos: **3× MG996R** on the shoulder and elbow,
-**3× SG90** from the wrist out. (The first budget was 2× MG996R + 4× SG90; the elbow SG90
-could not hold the arm in Gazebo, so the elbow is now an MG996R. The simulation already
-uses it; the CAD is being redrawn.)
+> **Status:** runs in RViz, Gazebo, MoveIt and the web dashboard. The CAD is still changing
+> and no hardware is connected yet. See [CHANGELOG.md](CHANGELOG.md).
 
-> **Status:** the new model runs in RViz, Gazebo and MoveIt, and the web dashboard shows
-> and drives it live. The 3× MG996R + 3× SG90 layout holds a **20 g** payload in
-> simulation. The Fusion 360 design is still under construction (elbow mount being
-> redrawn, more changes to come). No hardware connected yet. See
-> [CHANGELOG.md](CHANGELOG.md).
+## Model files are not in the repo
 
-
-## The arm model files are supplied locally
-
-The model is kept outside the repo, so these files are git-ignored:
-
-| Not committed | What it is |
-|---|---|
-| `ava_description/urdf/ava_robotic_arm.urdf` | the Fusion 360 export |
-| `ava_description/urdf/ava.kinematics.xacro` | generated from the export |
-| `ava_description/urdf/ava.urdf` | generated from the xacro |
-| `ava_description/meshes/*.stl` | the part meshes |
-| `hardware/stl/`, `hardware/step/` | printable and CAD exports |
-
-The two generated files are excluded alongside the export, because they carry the same
-geometry.
-
-Everything else is tracked, including all the hand-written xacro (`ava.urdf.xacro`,
-`ava.common.xacro`, `ava.control.xacro`, `ava.ros2control.xacro`, `ava.gazebo.xacro`).
-**A fresh clone will not launch the robot** until the model files are dropped in and
-regenerated — see [ava_description](ros2_ws/src/ava_description/README.md).
+The CAD export, the URDF/xacro generated from it, the meshes and the STL/STEP files are
+git-ignored, so a fresh clone will not launch the robot. See
+[ava_description](ros2_ws/src/ava_description/README.md).
 
 ## Layout
 
@@ -51,40 +24,20 @@ regenerated — see [ava_description](ros2_ws/src/ava_description/README.md).
 | `ros2_ws/src/ava_moveit_config` | MoveIt 2 config. |
 | `ros2_ws/src/ava_vision` | ArUco perception. |
 | `ros2_ws/src/ava_bringup` | Top-level launch (stub). |
-| `ros2_ws/src/ava_hardware` | ros2_control plugin for the real arm (ESP32 + PCA9685 over USB serial); parked, not built yet. |
+| `ros2_ws/src/ava_hardware` | ros2_control plugin for the real arm (not built yet). |
 | `LICENSES/` | Third-party license texts (see [ATTRIBUTION.md](ATTRIBUTION.md)). |
 | `dashboard/` | Web dashboard (git submodule, [ava-dashboard](https://github.com/TomasSirotek/ava-dashboard)). |
 | `firmware/` | ESP32-C3 servo driver (PlatformIO): serial protocol v1 → PCA9685 pulses, with PC unit tests. |
-| `hardware/` | Bill of materials (`bom.md`); STEP/STL exports and the KiCad project are local, not tracked. |
-| `tools/` | Offline scripts: torque monitor (`compare_urdf.py`, `measure_mashes.py` are empty placeholders). |
+| `hardware/` | Bill of materials (`bom.md`). |
+| `tools/` | Torque monitor and helper scripts. |
 | `tests/` | Repo-level checks that the configs of all packages agree (pytest, no ROS needed). |
 
-Dependency direction: bringup -> control -> kinematics -> nothing.
-
-## Clone
-
-The dashboard is a submodule, so clone with `--recurse-submodules`:
+## Clone and build
 
 ```bash
 git clone --recurse-submodules git@github.com:TomasSirotek/ava-arm.git
-```
-
-Already cloned without it:
-
-```bash
-git submodule update --init
-```
-
-Pull the latest of both:
-
-```bash
-git pull --recurse-submodules
-```
-
-## Build
-
-```bash
-cd ros2_ws
+# already cloned without submodules: git submodule update --init
+cd ava-arm/ros2_ws
 source /opt/ros/jazzy/setup.bash
 colcon build --symlink-install
 ```
@@ -92,75 +45,43 @@ colcon build --symlink-install
 ## Run
 
 Use a normal terminal, not VS Code's integrated one (the VS Code snap breaks RViz/Gazebo).
-
-**One-time setup: keep ROS 2 on this machine.** Ava runs as one machine and one arm, so ROS 2
-programs only need to find each other on this computer. Add this line to `~/.bashrc` once:
-
-```bash
-export ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST
-```
-
-Open a new terminal, check that `printenv ROS_AUTOMATIC_DISCOVERY_RANGE` prints `LOCALHOST`, and
-run `ros2 daemon stop` once. Without it, ROS 2 (Jazzy) looks for other ROS programs on the whole
-local network and accepts their messages. This is a per-user shell setting, not something the
-repo can enforce. Remove the line only if ROS ever has to run across two computers.
-
 Source both setups first: `source /opt/ros/jazzy/setup.bash && source ros2_ws/install/setup.bash`.
 
-| What | Command | Details |
-|---|---|---|
-| Model + sliders in RViz | `ros2 launch ava_description display.launch.py` | [ava_description](ros2_ws/src/ava_description/README.md) |
-| Gazebo + MoveIt + RViz | `QT_QPA_PLATFORM=xcb ros2 launch ava_moveit_config gazebo_moveit.launch.py rviz_use_sim_time:=true` | [ava_moveit_config](ros2_ws/src/ava_moveit_config/README.md) |
-| Bridge for the dashboard | `ros2 launch rosbridge_server rosbridge_websocket_launch.xml` | needs `ros-jazzy-rosbridge-suite` |
-| Dashboard | `cd dashboard && pnpm dev` | [dashboard](dashboard/README.md) |
-| Torque check under load | `ros2 launch ava_description gazebo.launch.py payload_kg:=0.1` then `python3 tools/torque_monitor.py` | the current load test |
+| What | Command |
+|---|---|
+| Model + sliders in RViz | `ros2 launch ava_description display.launch.py` |
+| Gazebo + MoveIt + RViz | `QT_QPA_PLATFORM=xcb ros2 launch ava_moveit_config gazebo_moveit.launch.py rviz_use_sim_time:=true` |
+| Bridge for the dashboard (needs `ros-jazzy-rosbridge-suite`) | `ros2 launch rosbridge_server rosbridge_websocket_launch.xml address:=127.0.0.1` |
+| Dashboard | `cd dashboard && pnpm dev` |
 
 ## Tests and CI
 
-Repo-level checks (no ROS needed): the configs of all packages must agree.
+Config checks (no ROS needed):
 
 ```bash
 pip install -r tests/requirements.txt
 python3 -m pytest tests
 ```
 
-| Test file | Checks |
-|---|---|
-| `tests/test_joint_config.py` | the same six joints in every controller config (Gazebo, MoveIt, real arm); MoveIt velocity limits within the hardware driver's rate limit; SRDF named poses inside the joint limits |
-| `tests/test_servo_calibration.py` | the real-arm calibration in `ava.control.xacro`, with the driver's maths: every joint's whole range maps inside the 500–2500 µs pulse clamp, channels 0–5 = J1–J6, directions ±1 |
-| `tests/test_torque_monitor.py` | `tools/torque_monitor.py` uses the URDF effort limits as stall torque; OK / HOT / FAIL boundaries |
-
-Firmware unit tests (on the PC, no board needed), see `firmware/ava_servo_driver/README.md`:
+Firmware unit tests (on the PC, no board needed):
 
 ```bash
 cd firmware/ava_servo_driver
-pip install -r requirements.txt   # PlatformIO, or use the VS Code extension
+pip install -r requirements.txt
 pio test -e native
 ```
 
-GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) runs on every push to
-`main` and on pull requests:
+GitHub Actions runs the config tests, the dashboard unit tests against this repo, and the firmware
+tests plus an ESP32-C3 build. Dependabot keeps the dashboard submodule, actions and PlatformIO current.
 
-| Job | What |
-|---|---|
-| Config checks | the pytest suite above |
-| Dashboard against this repo | the dashboard submodule's unit tests, including its ROS-contract tests read from `ros2_ws/src/ava_description` (they are skipped in the dashboard repo's own CI); fails if those were skipped |
-| Firmware | the firmware unit tests (`pio test -e native`) and a full build for the ESP32-C3 (`pio run -e esp32c3`), about 3 min |
+## Security
 
-**Dashboard pointer:** Dependabot ([`.github/dependabot.yml`](.github/dependabot.yml)) checks
-ava-dashboard's `main` daily and opens a PR moving `dashboard/` to its newest commit. CI runs on
-it and [`dependabot-auto-merge.yml`](.github/workflows/dependabot-auto-merge.yml) merges it when
-the required checks pass; a failing update stays open for a look. Workflow-action updates and new
-PlatformIO versions (`firmware/ava_servo_driver/requirements.txt`) come weekly and are merged by hand.
-
-**Branch protection** ([`.github/rulesets/main.json`](.github/rulesets/main.json), applied in the
-repo settings, same as the dashboard): `main` takes pull requests with "Config checks" and
-"Dashboard against this repo" green, no force-push or deletion; repository admins can bypass and
-push directly. "Firmware" is not a required check yet; it becomes one after a few green runs.
-
-Not in CI yet: building the ROS packages with colcon (they need the git-ignored model files).
-
+- Meant for one machine: set `export ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST` in `~/.bashrc`.
+- Bind rosbridge to `127.0.0.1`; never expose port 9090 or ROS traffic to a network (no authentication).
+- Software stops are not an emergency stop: keep the power switch within reach when hardware is connected.
 
 ## License
 
-Upstream sources and their licenses: [ATTRIBUTION.md](ATTRIBUTION.md), texts in [LICENSES/](LICENSES/).
+Copyright 2026 Tomas Sirotek. Licensed under the [Apache License 2.0](LICENSE), except where a file
+or package states otherwise (`ava_description` is MIT). Upstream sources and their licenses:
+[ATTRIBUTION.md](ATTRIBUTION.md), texts in [LICENSES/](LICENSES/).

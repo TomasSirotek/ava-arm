@@ -1,9 +1,7 @@
 # Dependabot version updates for ava-arm.
 version: 2
 updates:
-  # The dashboard submodule: once a day, a PR moving `dashboard` to the newest commit on
-  # ava-dashboard's main. CI runs on it and .github/workflows/dependabot-auto-merge.yml merges it
-  # when green, so ava-arm follows the dashboard without manual pointer commits.
+  # Dashboard submodule: daily; auto-merged when CI passes.
   - package-ecosystem: gitsubmodule
     directory: /
     schedule:
@@ -11,7 +9,7 @@ updates:
     commit-message:
       prefix: "chore(dashboard)"
 
-  # The actions in .github/workflows (pinned to commit SHAs): weekly, one grouped PR, merged by hand.
+  # Workflow actions: weekly, one grouped PR.
   - package-ecosystem: github-actions
     directory: /
     schedule:
@@ -23,9 +21,7 @@ updates:
     commit-message:
       prefix: "chore(ci)"
 
-  # PlatformIO, pinned in firmware/ava_servo_driver/requirements.txt (used by the "Firmware" CI
-  # job): weekly PR when a new version is out. CI builds and tests the firmware with it; merged by
-  # hand (the auto-merge workflow only handles the dashboard submodule).
+  # PlatformIO (firmware/ava_servo_driver/requirements.txt): weekly.
   - package-ecosystem: pip
     directory: /firmware/ava_servo_driver
     schedule:

@@ -1,9 +1,7 @@
 # ava_servo_driver: ESP32-C3 firmware
 
 Puts the pulse widths the ROS driver sends over USB serial onto the PCA9685's servo channels.
-No calibration or motion logic lives here: the ROS driver (`ava_hardware`) converts joint angles
-to microseconds, clamps them and limits the speed. The firmware only knows channels and
-microseconds, so it does not care whether a channel has an SG90 or an MG996R.
+No calibration or motion logic; the ROS driver (`ava_hardware`) does that.
 
 ## Where it sits
 
@@ -12,10 +10,6 @@ PC (ROS 2)                         ESP32-C3-DevKitM-1            PCA9685        
 ava_hardware/AvaServoSystem  --USB serial-->  this firmware  --I2C-->  16-ch PWM  --PWM--> ch 0-5
 (joint angles -> pulse widths)     115200 8N1, text lines         0x40, 50 Hz
 ```
-
-The ROS driver (`ros2_ws/src/ava_hardware`) already turns joint angles into pulse widths in
-microseconds and clamps them; the firmware only has to put those pulses on the right PCA9685
-channels. The servos report nothing back, so there is nothing to read from them.
 
 ## Wiring
 
@@ -38,9 +32,9 @@ from the ESP32 or USB. The ESP32 is powered by the USB cable only. Channel = joi
 | 4 | J5 wrist_roll | SG90 |
 | 5 | J6 gripper | SG90 |
 
-## The serial protocol the ROS driver speaks (v1)
+## Serial protocol (v1)
 
-USB serial at **115200 baud**, ASCII lines ending in `\n` (ignore `\r`). The driver's settings
+USB serial at **115200 baud**, ASCII lines ending in `\n` (`\r` is ignored). The driver's settings
 are in `ros2_ws/src/ava_description/urdf/ava.urdf.xacro` (`serial_port`, default
 `/dev/ttyUSB0`, `baud_rate`) and `ava.control.xacro`.
 
@@ -51,34 +45,11 @@ are in `ros2_ws/src/ava_description/urdf/ava.urdf.xacro` (`serial_port`, default
 | `D` | switches all channels off (servos go limp) | nothing |
 | anything else | ignores it | `ERR <short reason>` (the driver logs it as a warning) |
 
-Behaviour the driver relies on:
-
-- **At boot all channels are off** and the firmware prints `AVA_SERVO 1 6 READY` once.
-- **Handshake:** opening the port resets the ESP32, so the driver keeps sending `?` every 250 ms
-  for up to 4 s (`servo_handshake_timeout_ms`) until either reply line arrives. No reply means
-  "Is the ESP32 connected to this port and flashed with the Ava servo firmware?".
-- **The last `P` pulses are held** until the next `P`, a `D` or power-off. The driver only sends
-  `P` when a pulse changes, so the firmware must not time out and switch off on its own.
-- **If the board restarts** while running (USB glitch, brown-out) it prints the `READY` line again;
-  the driver then re-sends the last pulses.
-- **Pulse range:** the driver sends 500–2500 µs (or 0); clamping again on the firmware side is a
-  good safety net.
+- At boot all channels are off and the firmware prints `AVA_SERVO 1 6 READY` once.
+- The last `P` pulses are held until the next `P`, a `D` or power-off.
+- The firmware clamps pulses to 500–2500 µs.
 
 ## Code structure
-
-One PlatformIO library per module in `lib/`. Each module has its headers in a folder with its own
-name, so includes say where things come from (`#include "ava_protocol/parser.h"`), and each module
-keeps its own config next to its code. Dependencies only point downwards:
-
-```mermaid
-flowchart TD
-  main["src/main.cpp<br/>wires the parts, Serial in/out"] --> fw["lib/ava_firmware<br/>behaviour + PwmOutput interface"]
-  main --> pca["lib/pca9685_output<br/>PCA9685 driver (Arduino)"]
-  main --> board["include/board_config.h<br/>this board's values"]
-  fw --> proto["lib/ava_protocol<br/>parse lines, protocol constants"]
-  pca -. implements .-> fw
-  board --> pca
-```
 
 ```
 ava_servo_driver/
@@ -113,11 +84,6 @@ ava_servo_driver/
 | More than 16 channels | a second `Pca9685Config` (e.g. address 0x41) and a small `PwmOutput` that splits channels across the two boards |
 | A new command | `command.h` + `parser.cpp`, then `servo_firmware.cpp`, with tests in both suites |
 
-`ava_protocol` and `ava_firmware` are plain C++ without Arduino, so the tests run on the PC.
-If the PCA9685 does not answer at boot, the firmware prints `ERR PCA9685 not found on I2C …` and
-answers `?` and `P` with the same error instead of `AVA_SERVO`, so the ROS driver's handshake
-fails with a clear reason instead of sending pulses into nothing.
-
 ## Build, test, flash
 
 ```bash
@@ -136,11 +102,7 @@ pio device monitor --echo     # talk to it by hand at 115200
    means the I2C wiring (SDA/SCL swapped, VCC or GND missing) or a different address.
 3. One servo, horn only: `P 1500 0 0 0 0 0` (channel 0), then `P 1000 0 0 0 0 0`,
    `P 2000 0 0 0 0 0`, then `D`. For another channel move the number: `P 0 0 0 1500 0 0` = ch 3.
-4. **Oscillator calibration.** The PCA9685's oscillator is not exactly 25 MHz, so every pulse is
-   off by the same factor. With a servo whose real end points you know (e.g. measured directly on
-   an ESP32 pin), find the commanded value where it reaches that end through the PCA9685, then set
-   `kPca9685OscillatorHz = 25000000 × commanded / true` in `board_config.h`. Example: true end
-   2500 µs, reached at `P 2440 …` → 25000000 × 2440 / 2500 = 24400000.
-5. Only then the ROS driver (`ros2 launch ava_hardware real_robot.launch.py`, once `ava_hardware`
-   is un-parked). Per-joint calibration (centre, direction, range) lives in
-   `ros2_ws/src/ava_description/urdf/ava.control.xacro`, not in the firmware.
+4. Oscillator calibration: find the commanded value at which a servo reaches a known true end point,
+   then set `oscillator_hz` in `board::kPca9685` (`include/board_config.h`) to `25000000 × commanded / true`.
+5. Then the ROS driver (`ava_hardware`, not built yet); per-joint calibration is in
+   `ros2_ws/src/ava_description/urdf/ava.control.xacro`.

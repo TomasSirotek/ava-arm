@@ -1,13 +1,4 @@
-# ava-arm CI: checks that need no ROS install and none of the git-ignored model files.
-#   - Config checks: the configs of all ROS packages agree (joints, limits, named poses, servo
-#     calibration, torque values); tests/ with pytest.
-#   - Dashboard against this repo: the dashboard submodule's unit tests, including its ROS-contract
-#     tests (joint limits, effort limits, controller joints) read from this repo's ava_description.
-#     They are skipped in the dashboard repo's own CI, so this is where they really run. Dependabot's
-#     daily dashboard-update PRs run this too, so the pointer only moves to a compatible commit.
-#   - Firmware: the ESP32-C3 servo driver's unit tests on the PC (protocol, behaviour) and a full
-#     build for the board, so a firmware that does not compile cannot reach main.
-# ROS build/test (colcon) is not here yet: CI has none of the git-ignored model files.
+# CI: config tests, dashboard tests against this repo, firmware tests + ESP32-C3 build (no ROS needed).
 name: CI
 
 on:
@@ -29,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      # Actions are pinned to a full commit SHA; the comment is the release. Dependabot bumps both.
+      # Actions pinned to commit SHAs; Dependabot bumps them.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
@@ -56,8 +47,7 @@ jobs:
           submodules: true
           persist-credentials: false
 
-      # The dashboard reads the robot model through public/robot, a git-ignored symlink into
-      # ava_description that every checkout creates (see dashboard/README.md).
+      # The dashboard reads the robot model through the git-ignored public/robot symlink.
       - name: Link the robot model into the dashboard
         run: ln -s ../../ros2_ws/src/ava_description dashboard/public/robot
 
@@ -108,9 +98,6 @@ jobs:
 
       - name: Install PlatformIO
         run: pip install -r requirements.txt
-
-      # No cache for ~/.platformio on purpose: the ESP32 toolchains it downloads are ~5 GB, more
-      # than a fresh download takes (~2 min) and half of GitHub's 10 GB cache limit per repo.
 
       - name: Unit tests (on the PC)
         run: pio test -e native

@@ -2,10 +2,9 @@
 
 Overhead ArUco perception for the **AVA arm** robot: a single USB webcam, mounted
 looking straight down over the table, detects a cube (ArUco marker ID 0 on its top),
-computes its position in the robot `base_link`/`world` frame and publishes it on
-`/cup_pose` for the MoveIt pick-and-place task. Four table-corner markers (IDs 1–4)
-serve as the calibration rig for the camera transform. This is the perception half of
-**Part 4** of the series (`docs/part4-computer-vision-pick-and-place.md`).
+computes its position in the robot frame and publishes it on `/cup_pose` for the MoveIt
+pick-and-place task. Four table-corner markers (IDs 1–4) serve as the calibration rig
+for the camera transform.
 
 ## Nodes (executables)
 
@@ -13,25 +12,21 @@ serve as the calibration rig for the camera transform. This is the perception ha
 |---|---|
 | `camera_node` | USB webcam capture → `camera/image_raw` + `camera/camera_info` (loads intrinsics from `camera_info_url`). |
 | `aruco_detector_node` | Detect markers → `aruco/pose`, `aruco/poses`, `aruco/debug_image`; broadcasts TF `camera_optical_frame → aruco_marker_<id>`. |
-| `cube_pose_publisher` | TF `world → aruco_marker_0` → `/cup_pose` (PoseStamped) with EWMA smoothing + outlier rejection, RViz markers, the table collision object for MoveIt, and a continuous table-marker verification log (RMS). |
+| `cube_pose_publisher` | TF `world → aruco_marker_0` → `/cup_pose` (PoseStamped) with smoothing and outlier rejection, RViz markers, the table collision object for MoveIt, and a table-marker verification log (RMS). |
 | `camera_calibration_node` | Interactive checkerboard **intrinsics** calibration → YAML. |
-| `calibrate_extrinsics` | One-shot **extrinsics** calibration: solves the camera pose from the four table markers (Kabsch/SVD) and writes `config/camera_extrinsics.yaml`. |
+| `calibrate_extrinsics` | One-shot **extrinsics** calibration from the four table markers; writes `config/camera_extrinsics.yaml`. |
 | `generate_markers` | Generate printable ArUco markers. |
 
 ## TF tree
-
-> **Frames changed with the CAD redesign.** `world == base_link` no longer holds. The
-> robot root is now `base_footprint` (that is what `world` maps to), and `base_link` sits
-> 33.7 mm above it and rotated pi about X, because the CAD export is authored Z-down.
-> The table plane is therefore `base_footprint` z=0, not `base_link` z=0. Any
-> `camera_extrinsics.yaml` calibrated before the redesign is off by that transform, and
-> the nodes below still say `base_link` where they now mean `base_footprint`. Recalibrate
-> against `base_footprint` before trusting `/cup_pose`.
 
 ```
 world == base_footprint ──(static TF from config/camera_extrinsics.yaml)──
    camera_optical_frame ──(detector)── aruco_marker_0 (cube), aruco_marker_1..4 (table)
 ```
+
+The code and config still name the robot frame `base_link`, but since the CAD redesign the table
+plane is `base_footprint` z = 0. Recalibrate the extrinsics against `base_footprint` before
+trusting `/cup_pose`.
 
 ## Quick start
 
@@ -52,7 +47,7 @@ ros2 launch ava_vision vision_bringup.launch.py \
     camera_info_url:=/abs/path/to/your_calibration.yaml
 #   check: rqt_image_view /aruco/debug_image  (all 5 markers boxed)
 
-# 4) EXTRINSICS: measure your four table-marker centers in base_link (meters),
+# 4) EXTRINSICS: measure your four table-marker centers in base_footprint (meters),
 #    put them into config/aruco_params.yaml (table_markers_expected), then:
 ros2 run ava_vision calibrate_extrinsics --ros-args \
     --params-file <install>/config/aruco_params.yaml \
@@ -60,26 +55,18 @@ ros2 run ava_vision calibrate_extrinsics --ros-args \
 #   rebuild + restart vision. The verification log should show RMS < ~1 cm.
 ```
 
-The full pick-and-place (simulation and real) lives in `ava_moveit_config` —
-see that package's README.
+The pick-and-place demo lives in `ava_moveit_config`.
 
 ## Key config
 
 - `config/aruco_params.yaml` — marker sizes/IDs, dictionary, camera id/resolution,
-  cube-pose-publisher parameters (smoothing, outlier jump threshold, table geometry),
-  expected table-marker positions.
-- `config/camera_extrinsics.yaml` — static `base_link → camera_optical_frame`
-  (written by `calibrate_extrinsics`; device-specific — recalibrate after any camera move).
+  cube-pose-publisher parameters, expected table-marker positions.
+- `config/camera_extrinsics.yaml` — static robot base → `camera_optical_frame` (still named `base_link`)
+  (written by `calibrate_extrinsics`; recalibrate after any camera move).
 
 ## Notes
 
 - ArUco dictionary is `DICT_4X4_50` for all markers.
-- A 31 mm marker at 0.5 m is small: use 720p+, good and even lighting. Sub-pixel corner
-  refinement is enabled.
-- The cube marker sits on the cube **top**; the publisher reports a fixed cube-center
-  height, the grasp height itself is a task parameter.
-- The outlier filter rejects single-frame jumps > `min_position_jump` and re-seeds
-  automatically when the cube is genuinely moved. Sanity-check the raw detection with
-  `ros2 run tf2_ros tf2_echo world aruco_marker_0` if `/cup_pose` looks stale.
+- A 31 mm marker at 0.5 m is small: use 720p+ and good, even lighting.
 - If the camera fails to open, check which `/dev/video*` device it enumerated as after
   replugging (laptops: the internal webcam also claims indices).

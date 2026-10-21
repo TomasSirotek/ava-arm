@@ -50,16 +50,7 @@ rosbag2_*/
 
 # ---------------------------------------------------------------------------
 # Arm model files - kept out of the repo, supplied locally.
-#
-# ava_robotic_arm.urdf is the CAD export; ava.kinematics.xacro and ava.urdf are
-# generated from it and carry the same geometry, so all three are excluded
-# alongside the meshes.
-#
-# Regenerate them after a CAD export - see ava_description/README.md:
-#   scripts/generate_kinematics_xacro.py && scripts/generate_urdf.sh
-#
-# The hand-written xacro (ava.urdf.xacro, ava.common.xacro, ava.control.xacro,
-# ava.ros2control.xacro, ava.gazebo.xacro) stays tracked.
+# Generated from the CAD export; see ava_description/README.md.
 # ---------------------------------------------------------------------------
 ros2_ws/src/ava_description/meshes/*.stl
 ros2_ws/src/ava_description/urdf/ava_robotic_arm.urdf

@@ -1,6 +1,4 @@
-# Turns on auto-merge for Dependabot's dashboard-submodule PRs: GitHub merges them as soon as the
-# required CI checks (ruleset "Protect main") pass, and leaves them open if they fail.
-# Other Dependabot PRs (workflow actions) stay for a manual review.
+# Auto-merges Dependabot dashboard-submodule PRs once required checks pass.
 name: Dependabot auto-merge
 
 on: pull_request
