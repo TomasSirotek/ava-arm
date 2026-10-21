@@ -5,6 +5,8 @@
 #     tests (joint limits, effort limits, controller joints) read from this repo's ava_description.
 #     They are skipped in the dashboard repo's own CI, so this is where they really run. Dependabot's
 #     daily dashboard-update PRs run this too, so the pointer only moves to a compatible commit.
+#   - Firmware: the ESP32-C3 servo driver's unit tests on the PC (protocol, behaviour) and a full
+#     build for the board, so a firmware that does not compile cannot reach main.
 # ROS build/test (colcon) is not here yet: CI has none of the git-ignored model files.
 name: CI
 
@@ -85,3 +87,33 @@ jobs:
           jq -e '[.testResults[] | select(.name | endswith("ros-contract.test.ts")) | .assertionResults[].status]
             | length > 0 and all(. == "passed")' "$RUNNER_TEMP/vitest.json" > /dev/null
           echo "ROS-contract tests ran against ros2_ws/src/ava_description and passed."
+
+  firmware:
+    name: Firmware
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: firmware/ava_servo_driver
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: firmware/ava_servo_driver/requirements.txt
+
+      - name: Install PlatformIO
+        run: pip install -r requirements.txt
+
+      # No cache for ~/.platformio on purpose: the ESP32 toolchains it downloads are ~5 GB, more
+      # than a fresh download takes (~2 min) and half of GitHub's 10 GB cache limit per repo.
+
+      - name: Unit tests (on the PC)
+        run: pio test -e native
+
+      - name: Build for the ESP32-C3
+        run: pio run -e esp32c3

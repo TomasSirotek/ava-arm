@@ -1,0 +1,3 @@
+# PlatformIO version used by CI (.github/workflows/ci.yml, job "Firmware"). Locally the
+# VS Code extension or `pipx install platformio` works the same.
+platformio==6.2.0

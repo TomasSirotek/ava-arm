@@ -1,14 +1,15 @@
-# ava_servo_driver: firmware guide
+# ava_servo_driver: ESP32-C3 firmware
 
-This folder is an empty PlatformIO project skeleton (`platformio.ini`, `src/main.cpp`, `lib/`,
-`test/`) on purpose: the firmware is yours to write once the parts are here. This page says
-**what** it has to do so that the ROS side can drive it, not **how** to write it.
+Puts the pulse widths the ROS driver sends over USB serial onto the PCA9685's servo channels.
+No calibration or motion logic lives here: the ROS driver (`ava_hardware`) converts joint angles
+to microseconds, clamps them and limits the speed. The firmware only knows channels and
+microseconds, so it does not care whether a channel has an SG90 or an MG996R.
 
 ## Where it sits
 
 ```
 PC (ROS 2)                         ESP32-C3-DevKitM-1            PCA9685            servos
-ava_hardware/AvaServoSystem  --USB serial-->  your firmware  --I2C-->  16-ch PWM  --PWM--> ch 0-5
+ava_hardware/AvaServoSystem  --USB serial-->  this firmware  --I2C-->  16-ch PWM  --PWM--> ch 0-5
 (joint angles -> pulse widths)     115200 8N1, text lines         0x40, 50 Hz
 ```
 
@@ -63,19 +64,83 @@ Behaviour the driver relies on:
 - **Pulse range:** the driver sends 500–2500 µs (or 0); clamping again on the firmware side is a
   good safety net.
 
-## Things to learn along the way
+## Code structure
 
-1. PlatformIO: create the project for the board (`esp32-c3-devkitm-1`, Arduino framework), build,
-   upload, serial monitor at 115200.
-2. Serial: read characters into a line buffer, react on `\n`, split the line into words.
-3. I2C on the C3: start it on GPIO0/GPIO1 (the C3 has no default pins like the classic ESP32).
-4. PCA9685: 50 Hz means a 20 ms period split into 4096 steps, so one step is about 4.9 µs;
-   a pulse of `us` microseconds is `us * 4096 / 20000` steps. The board's oscillator is not
-   exactly 25 MHz; measuring it (or trimming by ear on a servo) makes the pulses accurate.
-   A library such as Adafruit's PWM Servo Driver does the register work for you.
-5. Bring-up order: one SG90 on channel 0 with the arm not attached; `?` by hand in the serial
-   monitor; then `P 1500 0 0 0 0 0`; then `D`; only then the ROS driver
-   (`ros2 launch ava_hardware real_robot.launch.py`, once `ava_hardware` is un-parked).
+One PlatformIO library per module in `lib/`. Each module has its headers in a folder with its own
+name, so includes say where things come from (`#include "ava_protocol/parser.h"`), and each module
+keeps its own config next to its code. Dependencies only point downwards:
 
-Testing on the PC: keep the line parsing in a plain C++ file without Arduino includes and it can be
-unit-tested with PlatformIO's `native` environment (`pio test -e native`).
+```mermaid
+flowchart TD
+  main["src/main.cpp<br/>wires the parts, Serial in/out"] --> fw["lib/ava_firmware<br/>behaviour + PwmOutput interface"]
+  main --> pca["lib/pca9685_output<br/>PCA9685 driver (Arduino)"]
+  main --> board["include/board_config.h<br/>this board's values"]
+  fw --> proto["lib/ava_protocol<br/>parse lines, protocol constants"]
+  pca -. implements .-> fw
+  board --> pca
+```
+
+```
+ava_servo_driver/
+├── platformio.ini                    board env (esp32c3) + PC test env (native)
+├── include/board_config.h            this board: baud, I2C pins GPIO0/1, PCA9685 0x40, 50 Hz, oscillator
+├── src/main.cpp                      the only place the parts are created and connected
+├── lib/
+│   ├── ava_protocol/                 plain C++: protocol v1 text -> commands
+│   │   └── src/ava_protocol/
+│   │       ├── protocol_config.h     version 1, 6 channels, 500-2500 µs clamp, max line length
+│   │       ├── command.h             the Command type (Query / SetPulses / Disable / Invalid)
+│   │       ├── parser.*              one line -> Command, pulse clamping
+│   │       └── line_buffer.*         characters -> lines, ignores \r, flags too-long lines
+│   ├── ava_firmware/                 plain C++: what the firmware does
+│   │   └── src/ava_firmware/
+│   │       ├── pwm_output.h          interface to the PWM hardware (no Arduino types)
+│   │       └── servo_firmware.*      boot (all off, READY), replies, pulses, ERR lines
+│   └── pca9685_output/               Arduino: PwmOutput on a PCA9685
+│       └── src/pca9685_output/
+│           ├── pca9685_config.h      Pca9685Config: pins, address, frequency, oscillator
+│           └── pca9685_output.*      Adafruit PWM Servo Driver; reports a missing chip
+└── test/
+    ├── test_protocol/                parser + line buffer
+    └── test_firmware/                behaviour against a fake PwmOutput
+```
+
+| To change | Edit |
+|---|---|
+| ESP32 pins, PCA9685 address, oscillator calibration, baud | `include/board_config.h` |
+| Number of channels, pulse clamp (must match `ava_hardware`) | `lib/ava_protocol/src/ava_protocol/protocol_config.h` |
+| Other PWM hardware | a new class implementing `ava_firmware/pwm_output.h`, created in `src/main.cpp` instead of `Pca9685Output` |
+| More than 16 channels | a second `Pca9685Config` (e.g. address 0x41) and a small `PwmOutput` that splits channels across the two boards |
+| A new command | `command.h` + `parser.cpp`, then `servo_firmware.cpp`, with tests in both suites |
+
+`ava_protocol` and `ava_firmware` are plain C++ without Arduino, so the tests run on the PC.
+If the PCA9685 does not answer at boot, the firmware prints `ERR PCA9685 not found on I2C …` and
+answers `?` and `P` with the same error instead of `AVA_SERVO`, so the ROS driver's handshake
+fails with a clear reason instead of sending pulses into nothing.
+
+## Build, test, flash
+
+```bash
+cd firmware/ava_servo_driver
+pio test -e native            # unit tests on the PC, no board needed
+pio run -e esp32c3            # build
+pio run -e esp32c3 -t upload  # flash (close any serial monitor and the ROS launch first)
+pio device monitor --echo     # talk to it by hand at 115200
+```
+
+## Bring-up
+
+1. Wiring as above, servos unplugged. PCA9685 V+ from the servo supply, **measured first**:
+   5 V for SG90-only tests, 6.0 V (XL4016) once MG996Rs are connected. Never above 6.0 V.
+2. Flash, open the monitor, press RESET: `AVA_SERVO 1 6 READY`. An `ERR PCA9685 not found` line
+   means the I2C wiring (SDA/SCL swapped, VCC or GND missing) or a different address.
+3. One servo, horn only: `P 1500 0 0 0 0 0` (channel 0), then `P 1000 0 0 0 0 0`,
+   `P 2000 0 0 0 0 0`, then `D`. For another channel move the number: `P 0 0 0 1500 0 0` = ch 3.
+4. **Oscillator calibration.** The PCA9685's oscillator is not exactly 25 MHz, so every pulse is
+   off by the same factor. With a servo whose real end points you know (e.g. measured directly on
+   an ESP32 pin), find the commanded value where it reaches that end through the PCA9685, then set
+   `kPca9685OscillatorHz = 25000000 × commanded / true` in `board_config.h`. Example: true end
+   2500 µs, reached at `P 2440 …` → 25000000 × 2440 / 2500 = 24400000.
+5. Only then the ROS driver (`ros2 launch ava_hardware real_robot.launch.py`, once `ava_hardware`
+   is un-parked). Per-joint calibration (centre, direction, range) lives in
+   `ros2_ws/src/ava_description/urdf/ava.control.xacro`, not in the firmware.

@@ -54,7 +54,7 @@ regenerated — see [ava_description](ros2_ws/src/ava_description/README.md).
 | `ros2_ws/src/ava_hardware` | ros2_control plugin for the real arm (ESP32 + PCA9685 over USB serial); parked, not built yet. |
 | `LICENSES/` | Third-party license texts (see [ATTRIBUTION.md](ATTRIBUTION.md)). |
 | `dashboard/` | Web dashboard (git submodule, [ava-dashboard](https://github.com/TomasSirotek/ava-dashboard)). |
-| `firmware/` | ESP32-C3 servo driver: empty PlatformIO project plus a guide to what it must do; to be written by hand once the parts arrive. |
+| `firmware/` | ESP32-C3 servo driver (PlatformIO): serial protocol v1 → PCA9685 pulses, with PC unit tests. |
 | `hardware/` | Bill of materials (`bom.md`); STEP/STL exports and the KiCad project are local, not tracked. |
 | `tools/` | Offline scripts: torque monitor (`compare_urdf.py`, `measure_mashes.py` are empty placeholders). |
 | `tests/` | Repo-level checks that the configs of all packages agree (pytest, no ROS needed). |
@@ -130,6 +130,14 @@ python3 -m pytest tests
 | `tests/test_servo_calibration.py` | the real-arm calibration in `ava.control.xacro`, with the driver's maths: every joint's whole range maps inside the 500–2500 µs pulse clamp, channels 0–5 = J1–J6, directions ±1 |
 | `tests/test_torque_monitor.py` | `tools/torque_monitor.py` uses the URDF effort limits as stall torque; OK / HOT / FAIL boundaries |
 
+Firmware unit tests (on the PC, no board needed), see `firmware/ava_servo_driver/README.md`:
+
+```bash
+cd firmware/ava_servo_driver
+pip install -r requirements.txt   # PlatformIO, or use the VS Code extension
+pio test -e native
+```
+
 GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) runs on every push to
 `main` and on pull requests:
 
@@ -137,61 +145,21 @@ GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) runs on 
 |---|---|
 | Config checks | the pytest suite above |
 | Dashboard against this repo | the dashboard submodule's unit tests, including its ROS-contract tests read from `ros2_ws/src/ava_description` (they are skipped in the dashboard repo's own CI); fails if those were skipped |
+| Firmware | the firmware unit tests (`pio test -e native`) and a full build for the ESP32-C3 (`pio run -e esp32c3`), about 3 min |
 
 **Dashboard pointer:** Dependabot ([`.github/dependabot.yml`](.github/dependabot.yml)) checks
-ava-dashboard's `main` daily and opens a PR moving `dashboard/` to its newest commit. Both jobs
-run on it and [`dependabot-auto-merge.yml`](.github/workflows/dependabot-auto-merge.yml) merges it
-when they pass; a failing update stays open for a look. Workflow-action updates come weekly and
-are merged by hand.
+ava-dashboard's `main` daily and opens a PR moving `dashboard/` to its newest commit. CI runs on
+it and [`dependabot-auto-merge.yml`](.github/workflows/dependabot-auto-merge.yml) merges it when
+the required checks pass; a failing update stays open for a look. Workflow-action updates and new
+PlatformIO versions (`firmware/ava_servo_driver/requirements.txt`) come weekly and are merged by hand.
 
 **Branch protection** ([`.github/rulesets/main.json`](.github/rulesets/main.json), applied in the
-repo settings, same as the dashboard): `main` takes pull requests with both jobs green, no
-force-push or deletion; repository admins can bypass and push directly.
+repo settings, same as the dashboard): `main` takes pull requests with "Config checks" and
+"Dashboard against this repo" green, no force-push or deletion; repository admins can bypass and
+push directly. "Firmware" is not a required check yet; it becomes one after a few green runs.
 
-Not in CI yet: building the ROS packages with colcon (they need the git-ignored model files) and
-the firmware (written by hand later).
+Not in CI yet: building the ROS packages with colcon (they need the git-ignored model files).
 
-## Security
-
-Ava is a development project meant to run **on one machine**, not on a network. Nothing here is
-hardened for LAN or internet exposure, and parts of it can move a physical arm, so treat every
-command interface as safety-relevant.
-
-**In place:**
-
-- Supply chain: CI installs from frozen lockfiles, fails on fixable high/critical advisories
-  (dashboard), runs CodeQL on the dashboard, and Dependabot proposes updates. Workflow actions are
-  pinned to commit SHAs, workflows run with a read-only token (the Dependabot auto-merge job is the
-  only one with write access, limited to Dependabot's dashboard-update PRs), checkout drops
-  credentials, and no repository secrets are used.
-- Secret scanning with push protection, and `main` protected (pull requests with green CI) in
-  both repos.
-- The real-arm driver (`ava_hardware`, not yet built) clamps every command to the URDF joint
-  limits, rate-limits each joint and clamps servo pulses to 500–2500 µs.
-
-**Not in place (known limitations):**
-
-- No authentication anywhere. The dashboard, rosbridge and the ROS 2 topics accept commands from
-  anyone who can reach them.
-- rosbridge's defaults listen on **all network interfaces** with no topic or service restriction,
-  and no check of which web page a connection comes from: any page open in a browser on the same
-  machine can connect to `ws://localhost:9090`.
-- ROS 2 discovery reaches the whole local network unless the one-time setup above
-  (`ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST`) is applied.
-
-**Recommended while running on one machine** (not yet the documented default):
-
-```bash
-ros2 launch rosbridge_server rosbridge_websocket_launch.xml address:=127.0.0.1   # rosbridge on localhost only
-cd dashboard/dist && python3 -m http.server 8080 --bind 127.0.0.1         # if serving the built dashboard
-```
-
-While rosbridge runs, use a separate browser profile for the dashboard and don't browse other
-sites in it.
-
-Do not run Ava on an untrusted or shared network, and do not expose ports 9090 (rosbridge),
-5173 (dashboard dev server) or ROS 2/DDS traffic to it. If you find a security problem, contact
-the author through GitHub rather than opening a public issue with details.
 
 ## License
 

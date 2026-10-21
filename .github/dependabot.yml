@@ -22,3 +22,14 @@ updates:
         patterns: ["*"]
     commit-message:
       prefix: "chore(ci)"
+
+  # PlatformIO, pinned in firmware/ava_servo_driver/requirements.txt (used by the "Firmware" CI
+  # job): weekly PR when a new version is out. CI builds and tests the firmware with it; merged by
+  # hand (the auto-merge workflow only handles the dashboard submodule).
+  - package-ecosystem: pip
+    directory: /firmware/ava_servo_driver
+    schedule:
+      interval: weekly
+      day: monday
+    commit-message:
+      prefix: "chore(firmware)"
