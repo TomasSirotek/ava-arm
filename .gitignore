@@ -70,3 +70,4 @@ hardware/step/*
 
 # KiCad electronics project: work in progress, kept local for now
 hardware/kicad/ava_arm_electronics/
+hardware/kicad/pca9685_3xsg90_test/

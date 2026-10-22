@@ -14,7 +14,7 @@
   <!-- One actuated joint. Calibration values come from ava.control.xacro; zero_us (pulse at
        q = 0) is derived from the pulse at mid-range:
          zero_us = center_us - direction * (lower + upper) / 2 * servo_us_per_rad -->
-  <xacro:macro name="ava_servo_joint" params="name channel direction center_us max_velocity lower upper">
+  <xacro:macro name="ava_servo_joint" params="name channel direction center_us max_velocity lower upper rest">
     <joint name="${name}">
       <xacro:if value="${hw_type == 'real'}">
         <param name="channel">${channel}</param>
@@ -26,6 +26,7 @@
         <param name="max_velocity">${max_velocity}</param>
         <param name="min_position">${lower}</param>
         <param name="max_position">${upper}</param>
+        <param name="rest_position">${rest}</param>
       </xacro:if>
       <command_interface name="position"/>
       <state_interface name="position"/>
@@ -50,41 +51,42 @@
       <xacro:if value="${hw_type == 'mock_components'}">
         <plugin>mock_components/GenericSystem</plugin>
       </xacro:if>
-      <!-- ESP32 + PCA9685 over USB serial (package ava_hardware). NOTE: activation commands
-           every joint to 0 rad, so the arm jumps to the home pose at start-up. -->
+      <!-- ESP32 + PCA9685 over USB serial (package ava_hardware). Activation commands the rest
+           pose (ava.control.xacro); deactivation parks the arm there first. -->
       <xacro:if value="${hw_type == 'real'}">
         <plugin>ava_hardware/AvaServoSystem</plugin>
         <param name="serial_port">$(arg serial_port)</param>
         <param name="baud_rate">$(arg baud_rate)</param>
         <param name="handshake_timeout_ms">${servo_handshake_timeout_ms}</param>
         <param name="release_on_deactivate">${str(servo_release_on_deactivate).lower()}</param>
+        <param name="park_duration_s">${servo_park_duration_s}</param>
       </xacro:if>
     </hardware>
 
     <xacro:ava_servo_joint name="shoulder_pan" channel="${shoulder_pan_channel}"
       direction="${shoulder_pan_direction}" center_us="${shoulder_pan_center_us}"
       max_velocity="${shoulder_pan_max_velocity}"
-      lower="${shoulder_pan_lower}" upper="${shoulder_pan_upper}"/>
+      lower="${shoulder_pan_lower}" upper="${shoulder_pan_upper}" rest="${shoulder_pan_rest}"/>
     <xacro:ava_servo_joint name="shoulder_lift" channel="${shoulder_lift_channel}"
       direction="${shoulder_lift_direction}" center_us="${shoulder_lift_center_us}"
       max_velocity="${shoulder_lift_max_velocity}"
-      lower="${shoulder_lift_lower}" upper="${shoulder_lift_upper}"/>
+      lower="${shoulder_lift_lower}" upper="${shoulder_lift_upper}" rest="${shoulder_lift_rest}"/>
     <xacro:ava_servo_joint name="elbow_flex" channel="${elbow_flex_channel}"
       direction="${elbow_flex_direction}" center_us="${elbow_flex_center_us}"
       max_velocity="${elbow_flex_max_velocity}"
-      lower="${elbow_flex_lower}" upper="${elbow_flex_upper}"/>
+      lower="${elbow_flex_lower}" upper="${elbow_flex_upper}" rest="${elbow_flex_rest}"/>
     <xacro:ava_servo_joint name="wrist_flex" channel="${wrist_flex_channel}"
       direction="${wrist_flex_direction}" center_us="${wrist_flex_center_us}"
       max_velocity="${wrist_flex_max_velocity}"
-      lower="${wrist_flex_lower}" upper="${wrist_flex_upper}"/>
+      lower="${wrist_flex_lower}" upper="${wrist_flex_upper}" rest="${wrist_flex_rest}"/>
     <xacro:ava_servo_joint name="wrist_roll" channel="${wrist_roll_channel}"
       direction="${wrist_roll_direction}" center_us="${wrist_roll_center_us}"
       max_velocity="${wrist_roll_max_velocity}"
-      lower="${wrist_roll_lower}" upper="${wrist_roll_upper}"/>
+      lower="${wrist_roll_lower}" upper="${wrist_roll_upper}" rest="${wrist_roll_rest}"/>
     <xacro:ava_servo_joint name="gripper" channel="${gripper_channel}"
       direction="${gripper_direction}" center_us="${gripper_center_us}"
       max_velocity="${gripper_max_velocity}"
-      lower="${gripper_lower}" upper="${gripper_upper}"/>
+      lower="${gripper_lower}" upper="${gripper_upper}" rest="${gripper_rest}"/>
   </ros2_control>
 
 </robot>

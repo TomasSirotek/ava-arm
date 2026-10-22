@@ -33,11 +33,42 @@
         <joint name="wrist_flex" value="-1.0"/>
         <joint name="wrist_roll" value="0"/>
     </group_state>
+    <group_state name="wrist_test_a" group="arm">
+        <joint name="elbow_flex" value="0"/>
+        <joint name="shoulder_lift" value="0"/>
+        <joint name="shoulder_pan" value="0"/>
+        <joint name="wrist_flex" value="-1.5"/>
+        <joint name="wrist_roll" value="1.0"/>
+    </group_state>
+    <group_state name="wrist_test_b" group="arm">
+        <joint name="elbow_flex" value="0"/>
+        <joint name="shoulder_lift" value="0"/>
+        <joint name="shoulder_pan" value="0"/>
+        <joint name="wrist_flex" value="0.4"/>
+        <joint name="wrist_roll" value="-1.5"/>
+    </group_state>
+    <group_state name="reach_left" group="arm">
+        <joint name="elbow_flex" value="-0.6"/>
+        <joint name="shoulder_lift" value="0.8"/>
+        <joint name="shoulder_pan" value="1.0"/>
+        <joint name="wrist_flex" value="-0.8"/>
+        <joint name="wrist_roll" value="0.5"/>
+    </group_state>
+    <group_state name="reach_right" group="arm">
+        <joint name="elbow_flex" value="-0.6"/>
+        <joint name="shoulder_lift" value="0.8"/>
+        <joint name="shoulder_pan" value="-1.0"/>
+        <joint name="wrist_flex" value="-0.8"/>
+        <joint name="wrist_roll" value="-0.5"/>
+    </group_state>
     <group_state name="open" group="gripper">
         <joint name="gripper" value="-0.59"/>
     </group_state>
     <group_state name="closed" group="gripper">
         <joint name="gripper" value="0.19"/>
+    </group_state>
+    <group_state name="half_open" group="gripper">
+        <joint name="gripper" value="-0.2"/>
     </group_state>
     <!--END EFFECTOR: Purpose: Represent information about an end effector.-->
     <end_effector name="gripper_eef" parent_link="gripper_base_link" group="gripper" parent_group="arm"/>

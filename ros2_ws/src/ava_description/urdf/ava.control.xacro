@@ -16,10 +16,12 @@
   <xacro:property name="servo_max_us" value="2500"/>
 
   <!-- Serial link to the ESP32. The ESP32 resets when the port is opened, so the handshake
-       waits for it to boot. release_on_deactivate=true sends "D" (all servos limp) when the
-       hardware is deactivated; false keeps the last pulses held. -->
+       waits for it to boot. On deactivation (Ctrl+C) the arm first moves smoothly to its rest
+       pose in servo_park_duration_s (0 = no parking, max 4); then release_on_deactivate=true
+       sends "D" (all servos limp), false keeps the rest pose held. -->
   <xacro:property name="servo_handshake_timeout_ms" value="4000"/>
   <xacro:property name="servo_release_on_deactivate" value="false"/>
+  <xacro:property name="servo_park_duration_s" value="2.0"/>
 
   <!-- PCA9685 channel per joint (J-number = channel + 1). -->
   <xacro:property name="shoulder_pan_channel" value="0"/>   <!-- J1 MG996R -->
@@ -57,6 +59,16 @@
   <xacro:property name="wrist_flex_max_velocity" value="8.73"/>     <!-- SG90 -->
   <xacro:property name="wrist_roll_max_velocity" value="8.73"/>     <!-- SG90 -->
   <xacro:property name="gripper_max_velocity" value="8.73"/>        <!-- SG90 -->
+
+  <!-- Rest pose (rad): the arm goes here on activation and parks here before shutdown. Set it to
+       the pose the assembled arm sits in when unpowered, so start-up barely moves it. Must lie
+       inside the joint limits below. 0 = the SRDF "home" pose. -->
+  <xacro:property name="shoulder_pan_rest" value="0.0"/>
+  <xacro:property name="shoulder_lift_rest" value="0.0"/>
+  <xacro:property name="elbow_flex_rest" value="0.0"/>
+  <xacro:property name="wrist_flex_rest" value="0.0"/>
+  <xacro:property name="wrist_roll_rest" value="0.0"/>
+  <xacro:property name="gripper_rest" value="0.0"/>
 
   <!-- Joint limits.
        GENERATED VALUES: these mirror the <limit> tags of the current CAD export

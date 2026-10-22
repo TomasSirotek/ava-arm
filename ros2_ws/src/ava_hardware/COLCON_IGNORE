@@ -1,4 +1,0 @@
-Parked: the ava_hardware ros2_control plugin is written but not yet built or tested.
-Deferred until hardware work resumes (see CHANGELOG.md "Probably next"). Delete this file,
-re-add <exec_depend>ava_hardware</exec_depend> to ava_moveit_config/package.xml, then build
-and smoke-test against a fake serial device before connecting the ESP32.

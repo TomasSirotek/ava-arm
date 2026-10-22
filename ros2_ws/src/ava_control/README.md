@@ -15,5 +15,5 @@ ros2 launch ava_control gamepad_control.launch.py
 
 ## Real hardware
 
-This package contains no hardware drivers. Real-arm use needs the ros2_control plugin in
-`ava_hardware`, which is not built yet (`COLCON_IGNORE`).
+This package contains no hardware drivers. The real arm runs through the ros2_control plugin in
+`ava_hardware` (`ros2 launch ava_hardware real_robot.launch.py serial_port:=/dev/ttyUSB0`).

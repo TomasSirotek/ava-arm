@@ -2,7 +2,8 @@
 // an ESP32 that talks to the PC over USB serial. Serial protocol v1 (ASCII, '\n'-terminated,
 // 115200 8N1): "?" -> "AVA_SERVO 1 6"; "P u0 .. u5" sets the pulse (us, 0 = off) of channels
 // 0..5; "D" turns all channels off; malformed lines -> "ERR <reason>"; boot -> "AVA_SERVO 1 6 READY".
-// Hobby servos give no feedback, so the reported joint state is the last command sent.
+// Hobby servos give no feedback, so the reported joint state is the last command sent. The arm
+// therefore starts at its rest pose on activation and is parked there (smoothly) on deactivation.
 
 #ifndef AVA_HARDWARE__AVA_SERVO_SYSTEM_HPP_
 #define AVA_HARDWARE__AVA_SERVO_SYSTEM_HPP_
@@ -76,6 +77,7 @@ private:
     double max_velocity = 0.0;
     double min_position = 0.0;
     double max_position = 0.0;
+    double rest_position = 0.0;  // start pose on activation, park pose on deactivation
 
     // Last position sent to the servo (= reported state) and its value at the previous read().
     double position = 0.0;
@@ -104,6 +106,8 @@ private:
   /// Reads every byte currently available without blocking and dispatches complete lines.
   bool drain_input();
   void handle_line(const std::string & line);
+  /// Moves every joint smoothly to its rest position over park_duration_s_ (blocking).
+  bool park();
 
   std::vector<Joint> joints_;
 
@@ -111,6 +115,7 @@ private:
   int baud_rate_ = 115200;
   int handshake_timeout_ms_ = 4000;
   bool release_on_deactivate_ = false;
+  double park_duration_s_ = 2.0;
 
   int fd_ = -1;
   std::string rx_line_;

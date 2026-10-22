@@ -15,6 +15,7 @@
 #include <cstring>
 #include <exception>
 #include <string>
+#include <thread>
 #include <unordered_map>
 
 #include "hardware_interface/types/hardware_interface_type_values.hpp"
@@ -36,6 +37,8 @@ constexpr int kDeviceMaxUs = 2500;
 constexpr int kQueryIntervalMs = 250;        // handshake: resend "?" this often
 constexpr int kWriteTimeoutMs = 50;          // give up on a line the UART will not take
 constexpr int kThrottleMs = 2000;            // ERR log throttle
+constexpr double kMaxParkDurationS = 4.0;    // ros2 launch escalates to SIGTERM ~5 s after Ctrl+C
+constexpr std::chrono::milliseconds kParkStep{20};  // one P line per 20 ms (50 Hz, like write())
 
 rclcpp::Logger logger()
 {
@@ -219,6 +222,18 @@ CallbackReturn AvaServoSystem::on_init(
     }
   }
 
+  park_duration_s_ = 2.0;
+  if (const auto it = hw.find("park_duration_s"); it != hw.end()) {
+    if (!parse_double(it->second, park_duration_s_) || park_duration_s_ < 0.0 ||
+      park_duration_s_ > kMaxParkDurationS)
+    {
+      RCLCPP_ERROR(
+        logger(), "Hardware parameter 'park_duration_s' = '%s' must be 0..%.1f (0 = no parking).",
+        it->second.c_str(), kMaxParkDurationS);
+      return CallbackReturn::ERROR;
+    }
+  }
+
   // ---- joints ----
   if (info_.joints.empty() || info_.joints.size() > kChannelCount) {
     RCLCPP_ERROR(
@@ -266,7 +281,8 @@ CallbackReturn AvaServoSystem::on_init(
       !require_int(joint.name, p, "max_us", joint.max_us) ||
       !require_double(joint.name, p, "max_velocity", joint.max_velocity) ||
       !require_double(joint.name, p, "min_position", joint.min_position) ||
-      !require_double(joint.name, p, "max_position", joint.max_position))
+      !require_double(joint.name, p, "max_position", joint.max_position) ||
+      !require_double(joint.name, p, "rest_position", joint.rest_position))
     {
       return CallbackReturn::ERROR;
     }
@@ -311,12 +327,19 @@ CallbackReturn AvaServoSystem::on_init(
       RCLCPP_ERROR(logger(), "Joint '%s': min_position must be < max_position.", name);
       return CallbackReturn::ERROR;
     }
+    if (joint.rest_position < joint.min_position || joint.rest_position > joint.max_position) {
+      RCLCPP_ERROR(
+        logger(), "Joint '%s': rest_position %.3f rad is outside [%.3f, %.3f].", name,
+        joint.rest_position, joint.min_position, joint.max_position);
+      return CallbackReturn::ERROR;
+    }
 
     const double us_at_min = position_to_us(joint, joint.min_position);
     const double us_at_max = position_to_us(joint, joint.max_position);
     const double us_low = std::min(us_at_min, us_at_max);
     const double us_high = std::max(us_at_min, us_at_max);
-    if (us_low < joint.min_us || us_high > joint.max_us) {
+    // Pulses are sent as whole microseconds, so ignore rounding below half a microsecond.
+    if (us_low < joint.min_us - 0.5 || us_high > joint.max_us + 0.5) {
       RCLCPP_WARN(
         logger(),
         "Joint '%s': position range [%.3f, %.3f] rad maps to [%.0f, %.0f] us, outside the pulse "
@@ -387,15 +410,15 @@ CallbackReturn AvaServoSystem::on_activate(const rclcpp_lifecycle::State &)
     return CallbackReturn::ERROR;
   }
 
-  // No feedback exists, so the plugin cannot start from where the arm happens to be: it
-  // commands home (0 rad, clamped into the joint range) and the servos jump there.
+  // No feedback exists, so the plugin cannot start from where the arm happens to be: it commands
+  // the rest pose and the servos go there at full speed. With the arm resting in that pose when
+  // powered off (it was parked there), this first command barely moves it.
   for (Joint & joint : joints_) {
-    const double home = std::clamp(0.0, joint.min_position, joint.max_position);
-    joint.position = home;
-    joint.prev_position = home;
-    (void)set_state(joint.position_state, home, true);
+    joint.position = joint.rest_position;
+    joint.prev_position = joint.rest_position;
+    (void)set_state(joint.position_state, joint.rest_position, true);
     (void)set_state(joint.velocity_state, 0.0, true);
-    (void)set_command(joint.position_command, home, true);
+    (void)set_command(joint.position_command, joint.rest_position, true);
   }
 
   compute_pulses();
@@ -403,22 +426,62 @@ CallbackReturn AvaServoSystem::on_activate(const rclcpp_lifecycle::State &)
     return CallbackReturn::ERROR;
   }
   active_ = true;
-  RCLCPP_INFO(logger(), "Activated: all joints commanded to home (0 rad).");
+  RCLCPP_INFO(logger(), "Activated: all joints commanded to their rest pose.");
   return CallbackReturn::SUCCESS;
 }
 
 CallbackReturn AvaServoSystem::on_deactivate(const rclcpp_lifecycle::State &)
 {
   active_ = false;
+  if (!park()) {
+    return CallbackReturn::ERROR;
+  }
   if (!release_on_deactivate_) {
-    RCLCPP_INFO(logger(), "Deactivated: servos keep holding their last pulse.");
+    RCLCPP_INFO(logger(), "Deactivated: parked at the rest pose, servos keep holding it.");
     return CallbackReturn::SUCCESS;
   }
   if (!send_release()) {
     return CallbackReturn::ERROR;
   }
-  RCLCPP_INFO(logger(), "Deactivated: all servos released (limp).");
+  RCLCPP_INFO(logger(), "Deactivated: parked at the rest pose, then all servos released (limp).");
   return CallbackReturn::SUCCESS;
+}
+
+bool AvaServoSystem::park()
+{
+  if (park_duration_s_ <= 0.0) {
+    return true;
+  }
+  std::vector<double> start;
+  start.reserve(joints_.size());
+  bool at_rest = true;
+  for (const Joint & joint : joints_) {
+    start.push_back(joint.position);
+    at_rest = at_rest && std::abs(joint.position - joint.rest_position) < 1e-4;
+  }
+  if (at_rest) {
+    return true;
+  }
+
+  // Cosine profile: slow at both ends, all joints start and arrive together.
+  const auto steps = std::max<long>(1, std::lround(park_duration_s_ * 1000.0 / kParkStep.count()));
+  for (long step = 1; step <= steps; ++step) {
+    const double k = 0.5 - 0.5 * std::cos(M_PI * static_cast<double>(step) / static_cast<double>(steps));
+    for (std::size_t i = 0; i < joints_.size(); ++i) {
+      joints_[i].position = start[i] + (joints_[i].rest_position - start[i]) * k;
+    }
+    compute_pulses();
+    if (!(sent_valid_ && pulses_ == sent_pulses_) && !send_pulses()) {
+      return false;
+    }
+    std::this_thread::sleep_for(kParkStep);
+  }
+  for (Joint & joint : joints_) {
+    joint.prev_position = joint.position;
+    (void)set_state(joint.position_state, joint.position, false);
+    (void)set_state(joint.velocity_state, 0.0, false);
+  }
+  return true;
 }
 
 return_type AvaServoSystem::read(const rclcpp::Time &, const rclcpp::Duration & period)

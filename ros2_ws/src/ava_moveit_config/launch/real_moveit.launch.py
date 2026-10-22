@@ -7,7 +7,7 @@ and starts move_group plus an optional MoveIt RViz.
   ros2 launch ava_moveit_config real_moveit.launch.py serial_port:=/dev/ttyUSB0 use_rviz:=true
 """
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, OpaqueFunction
+from launch.actions import DeclareLaunchArgument, GroupAction, IncludeLaunchDescription, OpaqueFunction
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
@@ -90,7 +90,8 @@ def generate_launch_description():
             DeclareLaunchArgument("serial_port", default_value="/dev/ttyUSB0"),
             DeclareLaunchArgument("use_rviz", default_value="true"),
             DeclareLaunchArgument("rviz_software_rendering", default_value="1"),
-            real_robot,
+            # Scoped, so the include's use_rviz:=false does not switch off MoveIt's RViz below.
+            GroupAction([real_robot], scoped=True),
             # The SRDF's virtual joint makes "world" MoveIt's planning frame, but the URDF
             # starts at base_footprint, so nothing else publishes it. Robot sits at the origin.
             Node(

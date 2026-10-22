@@ -7,13 +7,13 @@ OmArm Zero (see `ATTRIBUTION.md`).
 
 | File | Purpose |
 |---|---|
-| `config/ava.srdf` | Groups `arm` (`shoulder_pan`, `shoulder_lift`, `elbow_flex`, `wrist_flex`, `wrist_roll`; tip `end_effector_link`) and `gripper` (`gripper`); named states `home`, `pose_1`, `open`, `closed` |
+| `config/ava.srdf` | Groups `arm` (`shoulder_pan`, `shoulder_lift`, `elbow_flex`, `wrist_flex`, `wrist_roll`; tip `end_effector_link`) and `gripper` (`gripper`); named states `home`, `pose_1`, `wrist_test_a`, `wrist_test_b`, `reach_left`, `reach_right` (arm) and `open`, `closed`, `half_open` (gripper) |
 | `config/kinematics.yaml` | KDL solver with `position_only_ik: true` |
 | `config/joint_limits.yaml` | Planning velocity/acceleration limits |
 | `config/ros2_controllers.yaml`, `config/moveit_controllers.yaml` | One `joint_trajectory_controller` for all 6 joints |
 | `launch/demo.launch.py` | MoveIt + RViz with mock hardware |
 | `launch/gazebo_moveit.launch.py` | MoveIt on top of the Gazebo simulation |
-| `launch/real_moveit.launch.py` | MoveIt on the real arm (needs `ava_hardware`, not built yet) |
+| `launch/real_moveit.launch.py` | MoveIt on the real arm (through `ava_hardware`) |
 
 ```bash
 ros2 launch ava_moveit_config demo.launch.py
@@ -43,8 +43,8 @@ ros2 launch ava_moveit_config cube_gazebo.launch.py \
 `cube_real.launch.py` runs the demo on the real arm with `pick_place_params_real.yaml`.
 Never use the simulation parameter file on the real arm.
 
-> **Safety:** on activation the real arm moves straight to the all-zero pose; clear the
-> workspace first.
+> **Safety:** on activation the real arm moves at full servo speed to its rest pose
+> (`ava.control.xacro`); Ctrl+C parks it there smoothly. Clear the workspace first.
 
 ## Known limitations
 

@@ -104,5 +104,5 @@ pio device monitor --echo     # talk to it by hand at 115200
    `P 2000 0 0 0 0 0`, then `D`. For another channel move the number: `P 0 0 0 1500 0 0` = ch 3.
 4. Oscillator calibration: find the commanded value at which a servo reaches a known true end point,
    then set `oscillator_hz` in `board::kPca9685` (`include/board_config.h`) to `25000000 × commanded / true`.
-5. Then the ROS driver (`ava_hardware`, not built yet); per-joint calibration is in
-   `ros2_ws/src/ava_description/urdf/ava.control.xacro`.
+5. Then the ROS driver: `ros2 launch ava_hardware real_robot.launch.py serial_port:=<port>`.
+   Per-joint calibration is in `ros2_ws/src/ava_description/urdf/ava.control.xacro`.

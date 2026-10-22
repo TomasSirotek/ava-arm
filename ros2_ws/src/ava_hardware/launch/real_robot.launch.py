@@ -6,8 +6,8 @@ Starts robot_state_publisher (robot_description built with ros2_control_hardware
 the controller manager with ava_hardware/AvaServoSystem, joint_state_broadcaster and
 joint_trajectory_controller (same names/topics as Gazebo), and optionally RViz.
 
-WARNING: activating the hardware commands every joint to 0 rad, so the arm jumps to the home
-pose at full servo speed as soon as the controller manager starts. Keep clear of it.
+WARNING: activating the hardware commands every joint to its rest pose (ava.control.xacro) at
+full servo speed; Ctrl+C parks the arm there smoothly first. Keep clear of it.
 """
 import os
 

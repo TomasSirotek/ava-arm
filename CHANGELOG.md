@@ -10,6 +10,7 @@ All notable changes to this repo. Format: [Keep a Changelog](https://keepachange
 - Dependabot updates for the dashboard submodule, actions and PlatformIO.
 - `hardware/bom.md`: parts list with key specs and prices in CZK and EUR (701 CZK / 28.82 EUR).
 - ESP32-C3 servo firmware (serial protocol v1 → PCA9685), unit-tested on the PC.
+- `ava_hardware` ros2_control plugin is built (no longer parked); `real_robot.launch.py` drives the PCA9685 through the firmware.
 - `tools/torque_monitor.py`: live torque per joint vs its servo (OK / HOT / FAIL); Gazebo `payload_kg:=` option to test with a weight in the gripper.
 - `ava.ros2control.xacro`: one switch for `real` / `gazebo` / `mock_components` / `mujoco`.
 - `scripts/generate_urdf.sh`: builds the plain `urdf/ava.urdf` (for the dashboard and other tools) and validates it with `check_urdf`.
@@ -18,6 +19,10 @@ All notable changes to this repo. Format: [Keep a Changelog](https://keepachange
 - `ava_bringup` package (empty stub).
 - Top-level `LICENSE` (Apache-2.0) for this repo's own code.
 - `LICENSES/` with the MIT (OmArm Zero) and Apache-2.0 (SO-ARM100, so_arm_ros2) texts.
+- Real arm: per-joint rest pose (`ava.control.xacro`); the arm starts there and parks there smoothly on Ctrl+C (`servo_park_duration_s`).
+- SRDF test poses: `wrist_test_a`, `wrist_test_b`, `reach_left`, `reach_right` (arm) and `half_open` (gripper).
+- README: wiring diagram (`hardware/wiring.png`), KiCad schematic (`hardware/schematic.png`) and pin table.
+- README: step-by-step guide to run the real arm.
 
 ### Changed
 - In-house arm model (Fusion 360) replaces the SO-101 model; generator script `generate_kinematics_xacro.py`; SRDF rebuilt.
@@ -32,11 +37,15 @@ All notable changes to this repo. Format: [Keep a Changelog](https://keepachange
 - Legacy `ava_control` hardware bridges and their configs.
 - STS3215 serial-bus parameters (motor IDs, EEPROM PID, `/dev/ttySERVO`) from the xacro.
 
+### Fixed
+- `real_moveit.launch.py` now starts RViz (the included `real_robot.launch.py` switched it off).
+- `ava_hardware`: no clamp warning for pulses that only round onto a servo limit.
+
 ### Known issues
 - Pick-and-place scripts (`arm_ik.py`, `cup_pick_and_place.py`) not yet ported to the current arm (`TODO(cad-redesign)`).
 - `joint_limits.yaml` velocities not tuned.
 - Overhead-camera extrinsics need recalibration.
-- Hardware layer (`ava_hardware`, firmware) not yet tested on hardware.
+- `ava_hardware` tested against a simulated board only; real-arm calibration pending.
 
 ## 2026-09-24 — Initial import
 - Repo created from the OmArm Zero ROS 2 workspace.
